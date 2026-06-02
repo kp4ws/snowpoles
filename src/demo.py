@@ -35,7 +35,7 @@ def download_models():
     url = 'https://zenodo.org/records/12764696/files/CO_and_WA_model.pth'
     
     # download if does not exist  
-    if not os.path.exists(f'{save_path}\CO_and_WA_model.pth'):
+    if not os.path.exists(f'{save_path}/CO_and_WA_model.pth'):
         wget_command = f'wget {url} -P {save_path}'
         output_file = os.path.join(save_path, url.split("/")[-1]).replace("\\","/")
         curl_command = f'curl -L --ssl-no-revoke "{url}" -o "{output_file}"'
@@ -65,7 +65,7 @@ def load_model(device):
     # pull model from cloud storage
     model_path = 'models/CO_and_WA_model.pth'  
     
-    checkpoint = torch.load(model_path, map_location=torch.device(device)) 
+    checkpoint = torch.load(model_path, map_location=torch.device(device), weights_only=False) 
     
   # load model weights state_dict
     model.load_state_dict(checkpoint['model_state_dict'])
@@ -119,13 +119,12 @@ def predict(model, device): ##
 
             #######
             outputs = model(image)
-            outputs = outputs.cpu().numpy() 
-            pred_keypoint = np.array(outputs[0], dtype='float32')
+            outputs = outputs.cpu().numpy()
+            pred_keypoint = np.asarray(outputs[0], dtype=np.float32)
 
             image = image.squeeze()
-            image = image.cpu()
-            image = np.transpose(image, (1, 2, 0))
-            image = np.array(image, dtype='float32')
+            image = image.detach().cpu().numpy()
+            image = np.transpose(image, (1, 2, 0)).astype(np.float32, copy=False)
 
             ## resize back up to original size and project predicted points onto original size
             image = cv2.resize(image, (w, h))

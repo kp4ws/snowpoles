@@ -124,7 +124,7 @@ def load_model():
     model = snowPoleResNet50(pretrained=False, requires_grad=False).to(args.device)
     # load the model checkpoint
     model_path = f"{args.model}/model.pth"
-    checkpoint = torch.load(model_path, map_location=torch.device(args.device))
+    checkpoint = torch.load(model_path, map_location=torch.device(args.device), weights_only=False)
     print(f"loading model from the following path: {args.model}")
     # load model weights state_dict
     model.load_state_dict(checkpoint['model_state_dict'])

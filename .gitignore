@@ -1,3 +1,10 @@
 .DS_Store
-models
-predictions
+venv/
+.venv/
+__pycache__/
+*.py[cod]
+.ipynb_checkpoints/
+models/
+predictions/
+demo_predictions/
+runs/

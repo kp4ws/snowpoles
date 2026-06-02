@@ -156,8 +156,7 @@ if not os.path.exists(f"{args.output}"):
 # model
 model = snowPoleResNet50(pretrained=True, requires_grad=False).to(args.device)
 
-#torch.serialization.add_safe_globals([torch.nn.modules.loss.SmoothL1Loss])
-checkpoint = torch.load(args.model, map_location=torch.device(args.device))
+checkpoint = torch.load(args.model, map_location=torch.device(args.device), weights_only=False)
 model.load_state_dict(checkpoint["model_state_dict"])
 print("fine-tuned model loaded...")
 
