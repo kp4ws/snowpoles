@@ -1,39 +1,53 @@
 # All paths are relative to the root of the repository. Use forward slashes as separators, they will work on Windows as well.
 # Traversing up is supported. Use ".." in the path to go up a directory.
 
-
 [paths]
-#input_images = "/Users/cmbreen/Documents/snow/alaska_dataset/all_images"
-##input_images = "/Users/cmbreen/Documents/snow/alaska_dataset/all_images/BC_final_448/BC1TLDA" 
-#input_images = '/Volumes/My Book/alaska/native_res'
-#input_images = '/Volumes/My Book/alaska/native_res_448'
-#input_images = '/Users/cmbreen/Documents/native_res_448'
-
-input_images = '/Users/cmbreen/Documents/native_res_snex17'
-
-trainee_model = "/Users/cmbreen/Documents/FDLTCC/models/CO_and_WA_model.pth"
-models_output = "models/trained_snex17_cnn_camembed_lr1e4_18" # Directory where trained models should be stored. "model.pth" will be the filename of the trained model.
-#labels = "/Users/cmbreen/Documents/snow/alaska_dataset/all_images/labels_onepole.csv"
-##labels = "/Volumes/My Book/alaska/native_res/labels_nativeres.csv"
-##labels = '/Users/cmbreen/Documents/snow/alaska_dataset/all_images/labels_original.csv'
-#pole_metadata = '/Users/cmbreen/Documents/snow/alaska_dataset/submission/v1/pole_metadata.csv'
-#labels = '/Users/cmbreen/Documents/snow/alaska_dataset/submission/v1/labels_updated copy2.csv'
-
-#labels = '/Users/cmbreen/Documents/native_res_448/labels_allcams_cleaned.csv'
-#pole_metadata = '/Users/cmbreen/Documents/native_res_448/pole_metadata.csv'
-
-labels = '/Users/cmbreen/Documents/native_res_snex17/labels.csv'
-pole_metadata = '/Users/cmbreen/Documents/native_res_snex17/pole_metadata.csv'
+input_images = ''
+trainee_model = ''
+models_output = ''
+labels = ''
+pole_metadata = ''
 
 [labeling]
-pole_length = 104 # Length of poles
+pole_length = 104 # Length of poles (constant -> will need to figure out dynamic solution)
 subset_to_label = 10 # Label every N images
 
 [training]
 lr = 0.001 # Learning Rate 
 epochs = 200 # Epochs
-aug = false # whether to augment the data or not 
+aug = false # whether to augment the data or not
+
+#TODO: I'm not sure if code actually reads from this variable or if its hardcoded in the files
 device = "cpu" # Device to use, either "cuda" or "cpu".
+
 batch_size = 8 # Batch size
 show_dataset_plot = false # Show dataset plot
 filter = false
+
+
+
+
+
+#Breen's path data
+#===============================================================================================#
+#input_images = "/Users/cmbreen/Documents/snow/alaska_dataset/all_images"
+##input_images = "/Users/cmbreen/Documents/snow/alaska_dataset/all_images/BC_final_448/BC1TLDA" 
+#input_images = '/Volumes/My Book/alaska/native_res'
+#input_images = '/Volumes/My Book/alaska/native_res_448'
+#input_images = '/Users/cmbreen/Documents/native_res_448'
+#input_images = '/Users/cmbreen/Documents/native_res_snex17'
+
+#trainee_model = "/Users/cmbreen/Documents/FDLTCC/models/CO_and_WA_model.pth"
+#models_output = "models/trained_snex17_cnn_camembed_lr1e4_18" # Directory where trained models should be stored. "model.pth" will be the filename of the trained model.
+
+#labels = "/Users/cmbreen/Documents/snow/alaska_dataset/all_images/labels_onepole.csv"
+##labels = "/Volumes/My Book/alaska/native_res/labels_nativeres.csv"
+##labels = '/Users/cmbreen/Documents/snow/alaska_dataset/all_images/labels_original.csv'
+#pole_metadata = '/Users/cmbreen/Documents/snow/alaska_dataset/submission/v1/pole_metadata.csv'
+#labels = '/Users/cmbreen/Documents/snow/alaska_dataset/submission/v1/labels_updated copy2.csv'
+#labels = '/Users/cmbreen/Documents/native_res_448/labels_allcams_cleaned.csv'
+#pole_metadata = '/Users/cmbreen/Documents/native_res_448/pole_metadata.csv'
+
+#labels = '/Users/cmbreen/Documents/native_res_snex17/labels.csv'
+#pole_metadata = '/Users/cmbreen/Documents/native_res_snex17/pole_metadata.csv'
+#==============================================================================================#

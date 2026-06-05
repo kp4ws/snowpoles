@@ -20,3 +20,4 @@ interns_2025
 *.ckpt
 .vscode/
 .idea/
+CHRL_data/
