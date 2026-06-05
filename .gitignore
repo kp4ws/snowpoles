@@ -11,3 +11,12 @@ runs/
 alternative_models
 interns_2025
 .DS_Store
+.env
+.env.*
+*.log
+*.tfevents.*
+*.pt
+*.pth
+*.ckpt
+.vscode/
+.idea/
