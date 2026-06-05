@@ -8,3 +8,6 @@ models/
 predictions/
 demo_predictions/
 runs/
+alternative_models
+interns_2025
+.DS_Store

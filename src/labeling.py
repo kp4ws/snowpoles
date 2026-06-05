@@ -17,6 +17,9 @@ example run
 python src/labeling.py --datapath "/path/to/nontrained/data" --pole_length "304.8" --subset_to_label "2"
 python src/labeling.py --datapath "/Users/cmbreen/Documents/FDLTCC/FF_2024" --subset_to_label "10"
 
+python src/labeling.py --datapath "/Users/cmbreen/Documents/FDLTCC/summer_2025/FF_2024" --subset_to_label "10"
+
+
 
 """
 
@@ -33,6 +36,63 @@ import numpy as np
 from pathlib import Path
 import tomli as tomllib
 import IPython
+
+def enable_scroll_zoom_and_pan(ax, base_scale=1.2):
+    """Enables mouse-wheel zooming and right-click panning for a matplotlib axis"""
+    pan_state = {'is_panning': False, 'start_x': None, 'start_y': None, 'start_xlim': None, 'start_ylim': None}
+
+    def zoom(event):
+        if event.inaxes != ax: return
+        cur_xlim = ax.get_xlim()
+        cur_ylim = ax.get_ylim()
+        xdata = event.xdata 
+        ydata = event.ydata 
+        
+        if event.button == 'up':
+            scale_factor = 1 / base_scale # zoom in
+        elif event.button == 'down':
+            scale_factor = base_scale     # zoom out
+        else:
+            return
+
+        new_width = (cur_xlim[1] - cur_xlim[0]) * scale_factor
+        new_height = (cur_ylim[1] - cur_ylim[0]) * scale_factor
+        relx = (cur_xlim[1] - xdata)/(cur_xlim[1] - cur_xlim[0])
+        rely = (cur_ylim[1] - ydata)/(cur_ylim[1] - cur_ylim[0])
+
+        ax.set_xlim([xdata - new_width * (1-relx), xdata + new_width * (relx)])
+        ax.set_ylim([ydata - new_height * (1-rely), ydata + new_height * (rely)])
+        ax.figure.canvas.draw_idle()
+
+    def press(event):
+        # Button 3 is the RIGHT mouse button
+        if event.button == 3 and event.inaxes == ax:
+            pan_state['is_panning'] = True
+            pan_state['start_x'] = event.x
+            pan_state['start_y'] = event.y
+            pan_state['start_xlim'] = ax.get_xlim()
+            pan_state['start_ylim'] = ax.get_ylim()
+
+    def release(event):
+        if event.button == 3:
+            pan_state['is_panning'] = False
+
+    def motion(event):
+        if pan_state['is_panning'] and pan_state['start_x'] is not None:
+            dx_pixels = event.x - pan_state['start_x']
+            dy_pixels = event.y - pan_state['start_y']
+            bbox = ax.get_window_extent()
+            dx_data = dx_pixels * (pan_state['start_xlim'][1] - pan_state['start_xlim'][0]) / bbox.width
+            dy_data = dy_pixels * (pan_state['start_ylim'][1] - pan_state['start_ylim'][0]) / bbox.height
+            
+            ax.set_xlim(pan_state['start_xlim'][0] - dx_data, pan_state['start_xlim'][1] - dx_data)
+            ax.set_ylim(pan_state['start_ylim'][0] - dy_data, pan_state['start_ylim'][1] - dy_data)
+            ax.figure.canvas.draw_idle()
+
+    ax.figure.canvas.mpl_connect('scroll_event', zoom)
+    ax.figure.canvas.mpl_connect('button_press_event', press)
+    ax.figure.canvas.mpl_connect('button_release_event', release)
+    ax.figure.canvas.mpl_connect('motion_notify_event', motion)
 
 def main():
 
@@ -130,15 +190,15 @@ def main():
             else:
                 for line in labels2_csv:
                     splitline = line.split(",")
-                    cameraids.append(splitline[0])
-                    filename.append(splitline[1])
-                    creationTimes.append(splitline[2])
-                    topX.append(splitline[3])
-                    topY.append(splitline[4])
-                    bottomX.append(splitline[5])
-                    bottomY.append(splitline[6])
-                    PixelLengths.append(splitline[7].strip("\n"))
-                    snowdepths.append(splitline[8].strip("\n"))
+                    #cameraids.append(splitline[0])
+                    filename.append(splitline[0])
+                    creationTimes.append(splitline[1])
+                    topX.append(splitline[2])
+                    topY.append(splitline[3])
+                    bottomX.append(splitline[4])
+                    bottomY.append(splitline[5])
+                    PixelLengths.append(splitline[6].strip("\n"))
+                    #snowdepths.append(splitline[7].strip("\n"))
 
     except FileNotFoundError:
         write_headers_line = True
@@ -169,13 +229,24 @@ def main():
             ## assumes the cameras are stored in folder with their camera name
         figure = plt.figure(figsize=(20, 10), num=Path(file).name)
         plt.imshow(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
-        plt.title("label top and then bottom of 10cm section", fontweight="bold")
-        top_10, bottom_10 = plt.ginput(2)
+
+        ax = plt.gca()
+        enable_scroll_zoom_and_pan(ax)
+
+        plt.title("label top and then bottom of 10cm section \n Click ANYWHERE to confirm | BACKSPACE to undo | RIGHT-CLICK drag | SCROLL zoom", fontweight="bold")
+        points = plt.ginput(3, timeout=0, mouse_pop=2)
+        top_10, bottom_10 = points[0], points[1]
         plt.close()
+
         figure = plt.figure(figsize=(20, 10), num=Path(file).name)
         plt.imshow(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
-        plt.title("label top and then bottom of full pole", fontweight="bold")
-        top, bottom = plt.ginput(2)
+
+        ax = plt.gca()
+        enable_scroll_zoom_and_pan(ax)
+
+        plt.title("label top and then bottom of full pole \n Click ANYWHERE to confirm | BACKSPACE to undo | RIGHT-CLICK drag | SCROLL zoom.", fontweight="bold")
+        points = plt.ginput(3, timeout=0, mouse_pop=2)
+        top, bottom = points[0], points[1]
         plt.close()
         full_pole_length_px = math.dist((top), (bottom))
         full_pole_length_cm = (10 / math.dist((top_10), (bottom_10))) *  math.dist((top), (bottom))
@@ -224,8 +295,13 @@ def main():
             ## assumes the cameras are stored in folder with their camera name
             figure = plt.figure(figsize=(20, 10), num=Path(file).name)
             plt.imshow(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
-            plt.title("label top and then bottom", fontweight="bold")
-            top, bottom = plt.ginput(2)
+
+            ax = plt.gca()
+            enable_scroll_zoom_and_pan(ax)
+
+            plt.title("label top and then bottom of full pole \n Click ANYWHERE to confirm | BACKSPACE to undo | RIGHT-CLICK drag | SCROLL zoom.", fontweight="bold")
+            points = plt.ginput(3, timeout=0, mouse_pop=2)
+            top, bottom = points[0], points[1]
             topX.append(top[0]), topY.append(top[1])
             bottomX.append(bottom[0]), bottomY.append(bottom[1])
             plt.close()
