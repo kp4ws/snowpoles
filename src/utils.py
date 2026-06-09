@@ -1,15 +1,9 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import config
-import IPython
 import cv2 
-import argparse
 import math
 import pandas as pd 
-import glob
-import PIL
-from PIL import Image
-from PIL import ExifTags
 
 def valid_keypoints_plot(image, outputs, orig_keypoints, epoch):
     """
@@ -188,3 +182,59 @@ def MAPE(Y_actual,Y_Predicted):
     mape = ((np.abs(Y_actual - Y_Predicted)/Y_actual)*100)
     return mape
 
+def enable_scroll_zoom_and_pan(ax, base_scale=1.2):
+    """Enables mouse-wheel zooming and right-click panning for a matplotlib axis"""
+    pan_state = {'is_panning': False, 'start_x': None, 'start_y': None, 'start_xlim': None, 'start_ylim': None}
+
+    def zoom(event):
+        if event.inaxes != ax: return
+        cur_xlim = ax.get_xlim()
+        cur_ylim = ax.get_ylim()
+        xdata = event.xdata 
+        ydata = event.ydata 
+        
+        if event.button == 'up':
+            scale_factor = 1 / base_scale # zoom in
+        elif event.button == 'down':
+            scale_factor = base_scale     # zoom out
+        else:
+            return
+
+        new_width = (cur_xlim[1] - cur_xlim[0]) * scale_factor
+        new_height = (cur_ylim[1] - cur_ylim[0]) * scale_factor
+        relx = (cur_xlim[1] - xdata)/(cur_xlim[1] - cur_xlim[0])
+        rely = (cur_ylim[1] - ydata)/(cur_ylim[1] - cur_ylim[0])
+
+        ax.set_xlim([xdata - new_width * (1-relx), xdata + new_width * (relx)])
+        ax.set_ylim([ydata - new_height * (1-rely), ydata + new_height * (rely)])
+        ax.figure.canvas.draw_idle()
+
+    def press(event):
+        # Button 3 is the RIGHT mouse button
+        if event.button == 3 and event.inaxes == ax:
+            pan_state['is_panning'] = True
+            pan_state['start_x'] = event.x
+            pan_state['start_y'] = event.y
+            pan_state['start_xlim'] = ax.get_xlim()
+            pan_state['start_ylim'] = ax.get_ylim()
+
+    def release(event):
+        if event.button == 3:
+            pan_state['is_panning'] = False
+
+    def motion(event):
+        if pan_state['is_panning'] and pan_state['start_x'] is not None:
+            dx_pixels = event.x - pan_state['start_x']
+            dy_pixels = event.y - pan_state['start_y']
+            bbox = ax.get_window_extent()
+            dx_data = dx_pixels * (pan_state['start_xlim'][1] - pan_state['start_xlim'][0]) / bbox.width
+            dy_data = dy_pixels * (pan_state['start_ylim'][1] - pan_state['start_ylim'][0]) / bbox.height
+            
+            ax.set_xlim(pan_state['start_xlim'][0] - dx_data, pan_state['start_xlim'][1] - dx_data)
+            ax.set_ylim(pan_state['start_ylim'][0] - dy_data, pan_state['start_ylim'][1] - dy_data)
+            ax.figure.canvas.draw_idle()
+
+    ax.figure.canvas.mpl_connect('scroll_event', zoom)
+    ax.figure.canvas.mpl_connect('button_press_event', press)
+    ax.figure.canvas.mpl_connect('button_release_event', release)
+    ax.figure.canvas.mpl_connect('motion_notify_event', motion)

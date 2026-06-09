@@ -2,8 +2,8 @@
 # Traversing up is supported. Use ".." in the path to go up a directory.
 
 [paths]
-input_images = ''
-trainee_model = ''
+input_images = 'CHRL_data'
+trainee_model = 'models/CO_and_WA_model.pth'
 models_output = ''
 labels = ''
 pole_metadata = ''
