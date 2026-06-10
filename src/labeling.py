@@ -124,41 +124,43 @@ def main():
     subset_to_label = np.int16(args.subset_to_label)
 
     ## load labels.csv
-    write_headers_line = False
-    try:
-        with open(f"{args.path}/labels.csv", "r") as labels2_csv:
-            lines = labels2_csv.readlines()
+    labels_path = Path(args.path) / "labels.csv"
+    required_cols = [
+        "camera_id",
+        "stake_id",
+        "filename",
+        "datetime",
+        "x1",
+        "y1",
+        "x2",
+        "y2",
+        "pixel_length",
+    ]
 
-            with open(f"{args.path}/labels.csv", "w") as labels2_csv_write:
-                for line in lines:
-                    if line != "\n":
-                        labels2_csv_write.write(line)
-
-        with open(f"{args.path}/labels.csv", "r") as labels2_csv:
-            if not labels2_csv.readline().startswith('"filename"'):
-                write_headers_line = True
-            else:
-                for line in labels2_csv:
-                    splitline = line.split(",")
-                    camera_ids.append(splitline[0])
-                    stake_ids.append(splitline[1])
-                    filenames.append(splitline[2])
-                    creation_times.append(splitline[3])
-                    topX.append(splitline[4])
-                    topY.append(splitline[5])
-                    bottomX.append(splitline[6])
-                    bottomY.append(splitline[7])
-                    pixel_lengths.append(splitline[8].strip("\n"))
-                    #snowdepths.append(splitline[7].strip("\n"))
-
-    except FileNotFoundError:
-        write_headers_line = True
-    if write_headers_line:
+    if labels_path.exists():
+        try:
+            df_existing = pd.read_csv(labels_path, skip_blank_lines=True)
+            if not all(col in df_existing.columns for col in required_cols):
+                raise ValueError("Missing required columns")
+        except Exception:
+            print("labels.csv is corrupted or does not exist, creating...")
+            df_existing = pd.DataFrame(columns=required_cols)
+            df_existing.to_csv(labels_path, index=False)
+    else:
         print("labels.csv is corrupted or does not exist, creating...")
-        with open(f"{args.path}/labels.csv", "w") as labels2_csv:
-            labels2_csv.write(
-                '"camera_id", "stake_id", "filename","datetime","x1","y1","x2","y2","pixel_length"'
-            )
+        df_existing = pd.DataFrame(columns=required_cols)
+        df_existing.to_csv(labels_path, index=False) 
+
+    camera_ids = df_existing["camera_id"].astype(str).tolist()
+    stake_ids = df_existing["stake_id"].astype(str).tolist()
+    filenames = df_existing["filename"].astype(str).tolist()
+    creation_times = df_existing["datetime"].astype(str).tolist()
+    topX = df_existing["x1"].tolist()
+    topY = df_existing["y1"].tolist()
+    bottomX = df_existing["x2"].tolist()
+    bottomY = df_existing["y2"].tolist()
+    pixel_lengths = df_existing["pixel_length"].tolist()
+    #snowdepths = df_existing["snow_depth"].tolist()
 
     # Reset stake_ids for the main labeling loop
     stake_ids = []
