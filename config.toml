@@ -5,12 +5,12 @@
 input_images = 'CHRL_data'
 trainee_model = 'models/CO_and_WA_model.pth'
 models_output = ''
-labels = ''
-pole_metadata = ''
+labels = 'CHRL_data/labels.csv'
+pole_metadata = 'CHRL_data/pole_metadata.csv'
 
 [labeling]
-pole_length = 104 # Length of poles (constant -> will need to figure out dynamic solution)
-subset_to_label = 10 # Label every N images
+#pole_length = 104 # Length of poles -> Commented out because these vary in our implementation
+subset_to_label = 100 # Label every N images
 
 [training]
 lr = 0.001 # Learning Rate 

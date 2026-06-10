@@ -152,10 +152,6 @@ def main():
             height, width, channel = img.shape
             heights.append(height)
             widths.append(width)
-    
-
-    pole_length_cm_lookup = dict(zip(meta_camera_ids, pole_length_cms))
-    conversion_lookup = dict(zip(meta_camera_ids, conversions))
 
     metadata = pd.DataFrame(
         {

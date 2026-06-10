@@ -104,12 +104,6 @@ def main():
                 print("Invalid input.\n")
             quit()
 
-    # dir = glob.glob(f"{args.path}/**/*")  # /*") ## path to data directory
-    dir = list(
-        Path(args.path).rglob("*.JPG")
-    )  # Recursively lists all files and directories
-    dir = sorted(dir)
-
     ## labeling data
     camera_ids = []
     stake_ids = []
@@ -118,6 +112,14 @@ def main():
     topX, topY, bottomX, bottomY = [], [], [], []
     pixel_lengths = []
     snow_depths = []
+
+    metadata_path = Path(args.path) / "pole_metadata.csv"
+    meta_df = pd.read_csv(metadata_path)
+    meta_df["stake_id"] = meta_df["stake_id"].astype(str)
+
+    meta = meta_df.set_index(["camera_id", "stake_id"])
+    pole_length_cm_lookup = meta["pole_length_cm"].to_dict()
+    conversion_lookup = meta["pixel_cm_conversion"].to_dict()
 
     ## customized data
     #pole_length = np.float64(args.pole_length)
@@ -135,6 +137,7 @@ def main():
         "x2",
         "y2",
         "pixel_length",
+        "snow_depth",
     ]
 
     if labels_path.exists():
@@ -160,83 +163,86 @@ def main():
     bottomX = df_existing["x2"].tolist()
     bottomY = df_existing["y2"].tolist()
     pixel_lengths = df_existing["pixel_length"].tolist()
-    #snowdepths = df_existing["snow_depth"].tolist()
-
-    # Reset stake_ids for the main labeling loop
-    stake_ids = []
+    snow_depths = df_existing["snow_depth"].tolist()
 
     ### loop to label every nth photo!
-    i = 0
-    prev_cameraID = ""
-    for j, file in tqdm.tqdm(enumerate(dir)):
-        cameraID = Path(file).parent.name
-        # whether to start counter over
-        #i = i if len(cameraids) == 1 or cameraID == cameraids[-2] else 0
-        if j == 0 or cameraID != Path(dir[j-1]).parent.name:
-            i = 0
+    input_images = Path(args.path)
+    cam_dirs = [item for item in input_images.iterdir() if item.is_dir()]
+    for cam_dir in cam_dirs:
+        camera_id = cam_dir.name
+        
+        if camera_id != "CTRL1":
+            continue
 
-        if Path(file).name in filenames:
-            print(" ", Path(file).name, "has been labeled before, using stored data.")
+        files = sorted(cam_dir.glob("*.JPG"))
+        for image_index, file_path in enumerate(files):
+            if image_index % subset_to_label != 0:
+                continue
+            
+            img = cv2.imread(str(file_path))
+            figure = plt.figure(figsize=(20, 10), num=file_path.name)
+            plt.imshow(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
+            ax = plt.gca()
+            enable_scroll_zoom_and_pan(ax)
 
-        if i % subset_to_label == 0 and (not Path(file).name in filenames):
-            camera_ids.append(cameraID)
-            print(" ", Path(file).name)
-            img = cv2.imread(str(file))
+            plt.title("label top and then bottom of full pole \n Click ANYWHERE to confirm | BACKSPACE to undo | RIGHT-CLICK drag | SCROLL zoom.", fontweight="bold")
+            plt.tight_layout()
+            points = plt.ginput(7, timeout=0, mouse_pop=2)
+            plt.close()
+            
+            creation_time = os.path.getmtime(file_path)
+            formatted_datetime = datetime.datetime.fromtimestamp(creation_time).strftime("%m/%d/%Y %H:%M")
 
+            new_rows = []
             for k, stake in enumerate(STAKES):
-                height, width, channel = img.shape
-                ## assumes the cameras are stored in folder with their camera name
-                figure = plt.figure(figsize=(20, 10), num=Path(file).name)
-                plt.imshow(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
-
-                ax = plt.gca()
-                enable_scroll_zoom_and_pan(ax)
-
-                plt.title("label top and then bottom of full pole \n Click ANYWHERE to confirm | BACKSPACE to undo | RIGHT-CLICK drag | SCROLL zoom.", fontweight="bold")
-                points = plt.ginput(3, timeout=0, mouse_pop=2)
-                top, bottom = points[0], points[1]
-                topX.append(top[0]), topY.append(top[1])
-                bottomX.append(bottom[0]), bottomY.append(bottom[1])
-                plt.close()
-
+                top = points[2 * k]
+                bottom = points[2 * k + 1]
                 pixel_length = math.dist(top, bottom)
-                pixel_lengths.append(pixel_length)
+                snow_depth = pole_length_cm_lookup[(camera_id, stake)] - (pixel_length * conversion_lookup[(camera_id, stake)])
 
+                camera_ids.append(cam_dir.name)
                 stake_ids.append(stake)
+                filenames.append(file_path.name)
+                creation_times.append(formatted_datetime)
+                topX.append(top[0])
+                topY.append(top[1])
+                bottomX.append(bottom[0])
+                bottomY.append(bottom[1])
+                pixel_lengths.append(pixel_length)
+                snow_depths.append(snow_depth)
 
-            ## save data to labels.csv
-            nextline = f"\n{Path(file).name},{os.path.getctime(file)},{top[0]},{top[1]},{bottom[0]},{bottom[1]},{pixel_length}"
-            with open(f"{args.path}/labels.csv", "a") as labels2_csv:
-                labels2_csv.write(nextline)
+                new_rows.append({
+                    "camera_id": camera_id,
+                    "stake_id": stake,
+                    "filename": file_path.name,
+                    "datetime": formatted_datetime,
+                    "x1": top[0],
+                    "y1": top[1],
+                    "x2": bottom[0],
+                    "y2": bottom[1],
+                    "pixel_length": pixel_length,
+                    "snow_depth": snow_depth,
+                })
+            pd.DataFrame(new_rows).to_csv(labels_path, mode="a", header=False, index=False)
+    
 
-            filenames.append(Path(file).name)
-            creationTime = os.path.getmtime(file)
-            dt_c = datetime.datetime.fromtimestamp(creationTime)
-            formatted_datetime = dt_c.strftime("%m/%d/%Y %H:%M")
-            creation_times.append(formatted_datetime)
+    # ## simplified table for snow depth conversion later on
+    # df = pd.DataFrame(
+    #     {
+    #         "camera_id": camera_ids,
+    #         "stake_id": stake_ids,
+    #         "filename": filenames,
+    #         "datetime": creation_times,
+    #         "x1": topX,
+    #         "y1": topY,
+    #         "x2": bottomX,
+    #         "y2": bottomY,
+    #         "pixel_lengths": pixel_lengths,
+    #         "snow_depths":snow_depths,
+    #     }
+    # )
 
-            ## snowdepth ##
-            snow_depth = pole_length_cm_lookup[cameraID] - (pixel_length * conversion_lookup[cameraID])
-            snow_depths.append(snow_depth)
-
-        i += 1
-
-    ## simplified table for snow depth conversion later on
-    df = pd.DataFrame(
-        {
-            "camera_id":camera_ids,
-            "filename": filenames,
-            "datetime": creation_times,
-            "x1": topX,
-            "y1": topY,
-            "x2": bottomX,
-            "y2": bottomY,
-            "pixel_lengths": pixel_lengths,
-            "snow_depths":snow_depths,
-        }
-    )
-
-    df.to_csv(f"{args.path}/labels.csv", index=False)
+    # df.to_csv(f"{args.path}/labels.csv", index=False)
 
 if __name__ == "__main__":
     main()
