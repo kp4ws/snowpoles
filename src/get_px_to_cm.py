@@ -104,6 +104,10 @@ def main():
         if cameraID != "CTRL1":
             continue
 
+        snow_free_image = "CTRL1_20260504_10.jpg"
+        if(file.name != snow_free_image):
+            continue
+
         processed_cameras.add(cameraID)
         img = cv2.imread(str(file))
         

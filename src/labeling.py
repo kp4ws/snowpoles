@@ -165,18 +165,34 @@ def main():
     pixel_lengths = df_existing["pixel_length"].tolist()
     snow_depths = df_existing["snow_depth"].tolist()
 
+    #Tracks which images have already been labeled
+    already_labeled = set(zip(
+        df_existing["filename"].astype(str),
+        df_existing["camera_id"].astype(str)
+    ))
+
     ### loop to label every nth photo!
     input_images = Path(args.path)
     cam_dirs = [item for item in input_images.iterdir() if item.is_dir()]
     for cam_dir in cam_dirs:
         camera_id = cam_dir.name
-        
+
         if camera_id != "CTRL1":
             continue
 
         files = sorted(cam_dir.glob("*.JPG"))
         for image_index, file_path in enumerate(files):
             if image_index % subset_to_label != 0:
+                continue
+            
+            #Avoid labeling images that have already been labeled
+            if(file_path.name, camera_id) in already_labeled:
+                continue
+
+            #TODO: Delete later
+            snow_free_image = "CTRL1_20260504_10.jpg"
+            snow_image = "CTRL1_20260226_11.jpg"
+            if(file_path.name != snow_free_image and file_path.name != snow_image):
                 continue
             
             img = cv2.imread(str(file_path))
@@ -198,6 +214,10 @@ def main():
                 top = points[2 * k]
                 bottom = points[2 * k + 1]
                 pixel_length = math.dist(top, bottom)
+
+                #snow depth calculated by subtracting the known pole length by our pixel length (where we clicked in the image) * our conversion (previously calculated)
+                #In snow free images, snow depth should be ~0, which can be used as ground truth.
+                #In snowy images, our bottom click position should be at the snow interface, and the snow depth value should be higher (depending on amount of snow).
                 snow_depth = pole_length_cm_lookup[(camera_id, stake)] - (pixel_length * conversion_lookup[(camera_id, stake)])
 
                 camera_ids.append(cam_dir.name)
