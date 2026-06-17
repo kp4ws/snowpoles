@@ -1,9 +1,11 @@
 import matplotlib.pyplot as plt
 import numpy as np
-import config
 import cv2 
 import math
-import pandas as pd 
+import pandas as pd
+from arg_parser import ArgumentParser
+
+args = ArgumentParser()
 
 def valid_keypoints_plot(image, outputs, orig_keypoints, epoch):
     """
@@ -31,7 +33,7 @@ def valid_keypoints_plot(image, outputs, orig_keypoints, epoch):
         else:
             plt.plot(output_keypoint[p, 0], output_keypoint[p, 1], 'r.') ## bottom
             plt.plot(orig_keypoint[p, 0], orig_keypoint[p, 1], 'b.')
-    plt.savefig(f"{config.OUTPUT_PATH}/val_epoch_{epoch}.png")
+    plt.savefig(f"{args.models_output}/val_epoch_{epoch}.png")
     plt.close()
 
 
@@ -86,7 +88,7 @@ def eval_keypoints_plot(file, image, outputs, eval, orig_keypoints):
         else:
             plt.plot(orig_keypoints[p, 0], orig_keypoints[p, 1], 'b.',  markersize=20)
             plt.plot(output_keypoint[p, 0], output_keypoint[p, 1], 'r.', markersize=20) ## bottom
-    plt.savefig(f"{config.OUTPUT_PATH}/{eval}/{eval}_{file}.png")
+    plt.savefig(f"{args.models_output}/{eval}/{eval}_{file}.png")
     plt.close()
 
 def vis_keypoints(image, keypoints, color=(0,255,0), diameter=15):
@@ -114,69 +116,69 @@ def vis_predicted_keypoints(args, file, image, keypoints, color=(0,255,0), diame
     plt.close()
    
 
-def camres(Camera):    
-    df = pd.read_csv(f'{config.native_res_path}')
-    try: 
-        orig_w = df.loc[df['camID'] == Camera, 'orig_w'].iloc[0]
-        orig_h = df.loc[df['camID'] == Camera, 'orig_h'].iloc[0]
-    except: 
-        print('error')
-    return orig_w, orig_h 
+# def camres(Camera):    
+#     df = pd.read_csv(f'{config.native_res_path}')
+#     try: 
+#         orig_w = df.loc[df['camID'] == Camera, 'orig_w'].iloc[0]
+#         orig_h = df.loc[df['camID'] == Camera, 'orig_h'].iloc[0]
+#     except: 
+#         print('error')
+#     return orig_w, orig_h 
 
 
-def conversionDic(Camera):
-    conversion_table = pd.read_csv(f'{config.snowfreetbl_path}')
-    convDic = dict(zip(conversion_table['camera'], conversion_table['conversion']))
-    conversion = convDic[Camera]
+# def conversionDic(Camera):
+#     conversion_table = pd.read_csv(f'{config.snowfreetbl_path}')
+#     convDic = dict(zip(conversion_table['camera'], conversion_table['conversion']))
+#     conversion = convDic[Camera]
 
-    stake_cm_dic = dict(zip(conversion_table['camera'], conversion_table['snow_free_cm'])) ## snowfree stake
-    snowfreestake_cm = stake_cm_dic[Camera]
+#     stake_cm_dic = dict(zip(conversion_table['camera'], conversion_table['snow_free_cm'])) ## snowfree stake
+#     snowfreestake_cm = stake_cm_dic[Camera]
 
-    return conversion, snowfreestake_cm
+#     return conversion, snowfreestake_cm
 
-def outputs_in_cm(Camera, filename, x1s_pred, y1s_pred, x2s_pred, y2s_pred):
-    '''
-    This function converts the length in pixels to length in cm for each output
-    '''
-    orig_w, orig_h = camres(Camera)
-    conversion, snowfreestake_cm = conversionDic(Camera)
+# def outputs_in_cm(Camera, filename, x1s_pred, y1s_pred, x2s_pred, y2s_pred):
+#     '''
+#     This function converts the length in pixels to length in cm for each output
+#     '''
+#     orig_w, orig_h = camres(Camera)
+#     conversion, snowfreestake_cm = conversionDic(Camera)
 
-    keypoints = [x1s_pred, y1s_pred, x2s_pred, y2s_pred]
-    keypoints = np.array(keypoints, dtype='float32')
-    keypoints = keypoints.reshape(-1, 2)
-    keypoints = keypoints * [orig_w / 224, orig_h / 224] 
+#     keypoints = [x1s_pred, y1s_pred, x2s_pred, y2s_pred]
+#     keypoints = np.array(keypoints, dtype='float32')
+#     keypoints = keypoints.reshape(-1, 2)
+#     keypoints = keypoints * [orig_w / 224, orig_h / 224] 
     
-    proj_pix_length = math.dist(keypoints[0], keypoints[1])
-    proj_cm_length = proj_pix_length * float(conversion) 
-    snow_depth = snowfreestake_cm - float(proj_cm_length)
-    x1_proj, y1_proj, x2_proj, y2_proj = keypoints[0][0], keypoints[0][1], keypoints[1][0], keypoints[1][1]
+#     proj_pix_length = math.dist(keypoints[0], keypoints[1])
+#     proj_cm_length = proj_pix_length * float(conversion) 
+#     snow_depth = snowfreestake_cm - float(proj_cm_length)
+#     x1_proj, y1_proj, x2_proj, y2_proj = keypoints[0][0], keypoints[0][1], keypoints[1][0], keypoints[1][1]
   
-    cmresults = {'Camera':Camera,'filename':filename,'x1_proj':x1_proj,'y1_proj':y1_proj,
-                 'x2_proj':x2_proj,'y2_proj':y2_proj,'proj_pixel_length':proj_pix_length,
-                 'proj_cm_length':proj_cm_length,'snow_depth':snow_depth}
+#     cmresults = {'Camera':Camera,'filename':filename,'x1_proj':x1_proj,'y1_proj':y1_proj,
+#                  'x2_proj':x2_proj,'y2_proj':y2_proj,'proj_pixel_length':proj_pix_length,
+#                  'proj_cm_length':proj_cm_length,'snow_depth':snow_depth}
 
-    return cmresults 
+#     return cmresults 
 
 
-def datetimeExtrac(filename):
-    datetimeinfo = pd.read_csv(f'{config.datetime_info}')
-    fileDatetime = datetimeinfo.loc[datetimeinfo['filenames'] == filename, 'datetimes'].iloc[0]
-    return fileDatetime 
+# def datetimeExtrac(filename):
+#     datetimeinfo = pd.read_csv(f'{config.datetime_info}')
+#     fileDatetime = datetimeinfo.loc[datetimeinfo['filenames'] == filename, 'datetimes'].iloc[0]
+#     return fileDatetime 
 
-def diffcm(Camera, filename, automated_snow_depth):
+# def diffcm(Camera, filename, automated_snow_depth):
 
-    fileDatetime = datetimeExtrac(filename)
-    actual_snow_depth = pd.read_csv(f'{config.manual_labels_path}') ## add CH and OK poles using conversions
+#     fileDatetime = datetimeExtrac(filename)
+#     actual_snow_depth = pd.read_csv(f'{config.manual_labels_path}') ## add CH and OK poles using conversions
 
-    try: 
-        sd = float(actual_snow_depth[(actual_snow_depth['camera']==Camera) & (actual_snow_depth['dates']==fileDatetime)]['snowDepth'])
-        manual_snowdepth = sd
-        difference = manual_snowdepth - automated_snow_depth
-    except:
-        manual_snowdepth = 'na'
-        difference = 'na'
+#     try: 
+#         sd = float(actual_snow_depth[(actual_snow_depth['camera']==Camera) & (actual_snow_depth['dates']==fileDatetime)]['snowDepth'])
+#         manual_snowdepth = sd
+#         difference = manual_snowdepth - automated_snow_depth
+#     except:
+#         manual_snowdepth = 'na'
+#         difference = 'na'
 
-    return manual_snowdepth, difference
+#     return manual_snowdepth, difference
 
 def MAPE(Y_actual,Y_Predicted):
     mape = ((np.abs(Y_actual - Y_Predicted)/Y_actual)*100)
