@@ -16,9 +16,7 @@ python src/predict.py --model_path './output1/model.pth' --img_dir './nontrained
 '''
 
 # Import startup libraries
-import argparse
 import os
-import tomli as tomllib
 from pathlib import Path
 
 # for datetime
@@ -33,7 +31,12 @@ import pandas as pd
 from scipy.spatial import distance
 import torch
 from tqdm import tqdm
+# Import all libraries
+import albumentations
 import IPython
+import utils
+
+from arg_parser import ArgumentParser
 
 def vis_predicted_keypoints(file, image, keypoints, color=(0, 255, 0), diameter=15):
     import matplotlib.pyplot as plt
@@ -151,105 +154,7 @@ def predict(model, args, device):
     return results
 
 def main():
-    # Argument parser
-    parser = argparse.ArgumentParser(description="Use a model to predict snow depth")
-    parser.add_argument(
-        "--model",
-        required=False,
-        help="model to use",
-    )
-    parser.add_argument("--path", help="directory where images are located")
-    parser.add_argument(
-        "--device", required=False, help='device to use for processing ("cpu" or "cuda")'
-    )
-    parser.add_argument(
-        "--output", required=False, help="directory in which to store marked images"
-    )
-    parser.add_argument(
-        "--no_confirm", required=False, help="skip confirmation", action="store_true"
-    )
-    global args
-    args = parser.parse_args()
-
-    # Get arguments from config file if they weren't specified
-    with open("config.toml", "rb") as configfile:
-        config = tomllib.load(configfile)
-    if not args.model:
-        args.model = config["paths"]["models_output"]
-    if not args.path:
-        args.path = config["paths"]["input_images"]
-    if not args.device:
-        args.device = config["training"]["device"]
-    if not args.output:
-        args.output = config["paths"]["models_output"]
-
-    # Confirmation
-    if not args.no_confirm:
-        print(
-            "\n\n# The following options were specified in config.toml or as arguments:\n"
-        )
-        if (args.model.startswith("/")):
-            print(
-                "Model to use:\n"
-                + str(args.model)
-                + "\n"
-            )
-        else:
-            print(
-                "Model to use:\n"
-                + os.getcwd()
-                + "/"
-                + str(args.model)
-                + "\n"
-            )
-        if (args.path.startswith("/")):
-            print(
-                "Directory where images are located:\n"
-                + str(args.path)
-                + "\n"
-            )
-        else:
-            print(
-                "Directory where images are located:\n"
-                + os.getcwd()
-                + "/"
-                + str(args.path)
-                + "\n"
-            )
-        print("Device to use:\n" + args.device + "\n")
-        if (args.output.startswith("/")):
-            print(
-                "Directory where marked images will be stored:\n"
-                + str(args.output)
-                + "\n"
-            )
-        else:
-            print(
-                "Directory where marked images will be stored:\n"
-                + os.getcwd()
-                + "/"
-                + str(args.output)
-                + "\n"
-            )
-
-        confirmation = str(input("\nIs this OK? (y/n) "))
-        if confirmation.lower() != "y":
-            if confirmation.lower() == "n":
-                print(
-                    "\nEdit the config file, located at",
-                    os.getcwd()
-                    + "/config.toml, to your liking, or edit the command line arguments if they were specified, and then re-run this file.\n",
-                )
-            else:
-                print("Invalid input.\n")
-            quit()
-
-
-    # Import all libraries
-    import albumentations
-    import IPython
-    import utils
-
+    args = ArgumentParser("Use a model to predict snow depth")
     model = load_model(args)
     device = 'cpu'
     predict(model, args, device)  

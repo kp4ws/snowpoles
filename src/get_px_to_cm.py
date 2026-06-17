@@ -13,6 +13,7 @@ import tomli as tomllib
 import IPython
 
 from utils import enable_scroll_zoom_and_pan
+from arg_parser import ArgumentParser
 
 #3 stakes per image
 STAKES = ["1", "2", "3"]
@@ -29,54 +30,7 @@ def get_stake_lengths(csv_path: str):
     return stake_lengths
 
 def main():
-    # Argument parser for command-line arguments:
-    parser = argparse.ArgumentParser(description="Manually label images for training")
-    parser.add_argument("--path", help="directory where images are located")
-    parser.add_argument(
-        "--datapath", help="(deprecated) directory where images are located"
-    )
-    # parser.add_argument(
-    #     "--pole_length", help="length of pole in cm"
-    # )
-    parser.add_argument(
-        "--subset_to_label", help="label every N images"
-    )
-    parser.add_argument(
-        "--no_confirm", required=False, help="skip confirmation", action="store_true"
-    )
-    args = parser.parse_args()
-    args.path = args.datapath
-
-    # Get arguments from config file if they weren't specified
-    with open("config.toml", "rb") as configfile:
-        config = tomllib.load(configfile)
-    if not args.path:
-        args.path = config["paths"]["input_images"]
-    # if not args.pole_length:
-    #     args.pole_length = config["labeling"]["pole_length"]
-    if not args.subset_to_label:
-        args.subset_to_label = config["labeling"]["subset_to_label"]
-
-    # Confirmation
-    if not args.no_confirm:
-        print(
-            "\n\n# The following options were specified in config.toml or as arguments:\n"
-        )
-        if (args.path.startswith("/")):
-            print(
-                "Directory where images are located:\n"
-                + str(args.path)
-                + "\n"
-            )
-        else:
-            print(
-                "Directory where images are located:\n"
-                + os.getcwd()
-                + "/"
-                + str(args.path)
-                + "\n"
-            )
-        #print("Pole length:\n" + str(args.pole_length) + "cm")
+    args = ArgumentParser("Manually label images for training")
 
     # dir = glob.glob(f"{args.path}/**/*")  # /*") ## path to data directory
     dir = list(

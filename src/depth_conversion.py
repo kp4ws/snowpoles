@@ -10,8 +10,6 @@ example command line to run:
 python src/depth_conversion.py --predictions_path '/predictions/results.csv' --metadata 'example_nontrained_data/pole_metadata.csv'
 
 '''
-
-
 import numpy as np
 import tomli as tomllib
 import os
@@ -22,72 +20,10 @@ from scipy.spatial import distance
 import IPython
 from pathlib import Path
 
+from arg_parser import ArgumentParser
+
 def main():
-    parser = argparse.ArgumentParser(description="Convert pixel lengths into snow depth")
-    parser.add_argument("--path", help="directory where images/metadata are located")
-    parser.add_argument(
-        "--output", required=False, help="directory in which to store marked images"
-    )
-    parser.add_argument(
-        "--no_confirm", required=False, help="skip confirmation", action="store_true"
-    )
-    global args
-    args = parser.parse_args()
-
-    # Get arguments from config file if they weren't specified
-    with open("config.toml", "rb") as configfile:
-        config = tomllib.load(configfile)
-    if not args.path:
-        args.path = config["paths"]["input_images"]
-    if not args.output:
-        args.output = config["paths"]["images_output"]
-
-    # Confirmation
-    if not args.no_confirm:
-        print(
-            "\n\n# The following options were specified in config.toml or as arguments:\n"
-        )
-        if (args.path.startswith("/")):
-            print(
-                "Directory where images/metadata are located:\n"
-                + str(args.path)
-                + "\n"
-            )
-        else:
-            print(
-                "Directory where images/metadata are located:\n"
-                + os.getcwd()
-                + "/"
-                + str(args.path)
-                + "\n"
-            )
-        if (args.output.startswith("/")):
-            print(
-                "Directory where results with snow depth will be stored:\n"
-                + str(args.output)
-                + "\n"
-            )
-        else:
-            print(
-                "Directory where results with snow depth will be stored:\n"
-                + os.getcwd()
-                + "/"
-                + str(args.output)
-                + "\n"
-            )
-
-        confirmation = str(input("\nIs this OK? (y/n) "))
-        if confirmation.lower() != "y":
-            if confirmation.lower() == "n":
-                print(
-                    "\nEdit the config file, located at",
-                    os.getcwd()
-                    + "/config.toml, to your liking, or edit the command line arguments if they were specified, and then re-run this file.\n",
-                )
-            else:
-                print("Invalid input.\n")
-            quit()
-
+    args = ArgumentParser("Convert pixel lengths into snow depth")
 
     predictions = pd.read_csv(f'{args.output}/results.csv')
     metadata = pd.read_csv(f"{args.path}/pole_metadata.csv")

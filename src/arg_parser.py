@@ -9,15 +9,16 @@ class ArgumentParser():
         self._add_arguments()
         self.args = self.parser.parse_args()
         self._get_arguments()
+        self._confirm_arguments()
 
     def _add_arguments(self):
         self.parser.add_argument("--model", required=False, help="model to use")
         # self.parser.add_argument("--datapath", help="(deprecated) directory where images are located")
         self.parser.add_argument("--path", help="directory where images are located")
         self.parser.add_argument("--subset_to_label", help="label every N images")
-
         self.parser.add_argument("--device", required=False, help='device to use for processing ("cpu" or "cuda")')
-        self.parser.add_argument("--output", required=False, help="directory in which to store marked images")
+        self.parser.add_argument("--models_output", required=False, help="directory in which to store models output")
+        self.parser.add_argument("--images_output", required=False, help="directory in which to store images output")
         self.parser.add_argument("--no_confirm", required=False, help="skip confirmation", action="store_true")
 
     def _get_arguments(self):
@@ -30,12 +31,12 @@ class ArgumentParser():
                 self.args.path = config["paths"]["input_images"]
             if not self.args.device:
                 self.args.device = config["training"]["device"]
-            if not self.args.output:
-                self.args.output = config["paths"]["models_output"]
             if not self.args.subset_to_label:
                 self.args.subset_to_label = config["labeling"]["subset_to_label"]
-            if not self.args.output:
-                self.args.output = config["paths"]["images_output"]
+            if not self.args.models_output:
+                self.args.models_output = config["paths"]["models_output"]
+            if not self.args.images_output:
+                self.args.images_output = config["paths"]["images_output"]
 
     def _confirm_arguments(self):
         if not self.args.no_confirm:
@@ -53,12 +54,18 @@ class ArgumentParser():
 
             print(f"Device to use:\n{self.args.device}\n")
 
-            if(self.args.output.startswith("/")):
-                print(f"Directory where marked images will be stored:\n{self.args.output}\n")            
+            if(self.args.models_output.startswith("/")):
+                print(f"Directory where models output will be stored:\n{self.args.output}\n")            
             else:
-                print(f"Directory where marked images will be stored:\n{os.getcwd()}/{self.args.output}\n")
+                print(f"Directory where models output will be stored:\n{os.getcwd()}/{self.args.output}\n")
 
-            print(f"Images to label:\nEvery {self.args.subset_to_label} images")
+            if(self.args.images_output.startswith("/")):
+                print(f"Directory where images output will be stored:\n{self.args.output}\n")            
+            else:
+                print(f"Directory where images output will be stored:\n{os.getcwd()}/{self.args.output}\n")
+
+            if(self.args.subset_to_label):
+                print(f"Images to label:\nEvery {self.args.subset_to_label} images")
             
             confirmation = str(input("\nIs this OK? (y/n) "))
             if confirmation.lower() != "y":

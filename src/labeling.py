@@ -38,71 +38,14 @@ import tomli as tomllib
 import IPython
 
 from utils import enable_scroll_zoom_and_pan
+from arg_parser import ArgumentParser
 
 #3 stakes per image
 STAKES = ["1", "2", "3"]
 
 def main():
     # Argument parser for command-line arguments:
-    parser = argparse.ArgumentParser(description="Manually label images for training")
-    parser.add_argument("--path", help="directory where images are located")
-    parser.add_argument(
-        "--datapath", help="(deprecated) directory where images are located"
-    )
-    # parser.add_argument(
-    #     "--pole_length", help="length of pole in cm"
-    # )
-    parser.add_argument(
-        "--subset_to_label", help="label every N images"
-    )
-    parser.add_argument(
-        "--no_confirm", required=False, help="skip confirmation", action="store_true"
-    )
-    args = parser.parse_args()
-    args.path = args.datapath
-
-    # Get arguments from config file if they weren't specified
-    with open("config.toml", "rb") as configfile:
-        config = tomllib.load(configfile)
-    if not args.path:
-        args.path = config["paths"]["input_images"]
-    # if not args.pole_length:
-    #     args.pole_length = config["labeling"]["pole_length"]
-    if not args.subset_to_label:
-        args.subset_to_label = config["labeling"]["subset_to_label"]
-
-    # Confirmation
-    if not args.no_confirm:
-        print(
-            "\n\n# The following options were specified in config.toml or as arguments:\n"
-        )
-        if (args.path.startswith("/")):
-            print(
-                "Directory where images are located:\n"
-                + str(args.path)
-                + "\n"
-            )
-        else:
-            print(
-                "Directory where images are located:\n"
-                + os.getcwd()
-                + "/"
-                + str(args.path)
-                + "\n"
-            )
-        #print("Pole length:\n" + str(args.pole_length) + "cm")
-        print("\nImages to label:\nEvery", str(args.subset_to_label), "images")
-        confirmation = str(input("\n\nIs this OK? (y/n) "))
-        if confirmation.lower() != "y":
-            if confirmation.lower() == "n":
-                print(
-                    "\nEdit the config file, located at",
-                    os.getcwd()
-                    + "/config.toml, to your liking, or edit the command line arguments if they were specified, and then re-run this file.\n",
-                )
-            else:
-                print("Invalid input.\n")
-            quit()
+    args = ArgumentParser("Manually label images for training")
 
     ## labeling data
     camera_ids = []
@@ -177,6 +120,7 @@ def main():
     for cam_dir in cam_dirs:
         camera_id = cam_dir.name
 
+        #NOTE: This filters out all cameras except CTRL1
         if camera_id != "CTRL1":
             continue
 
@@ -190,10 +134,10 @@ def main():
                 continue
 
             #TODO: Delete later
-            snow_free_image = "CTRL1_20260504_10.jpg"
-            snow_image = "CTRL1_20260226_11.jpg"
-            if(file_path.name != snow_free_image and file_path.name != snow_image):
-                continue
+            # snow_free_image = "CTRL1_20260504_10.jpg"
+            # snow_image = "CTRL1_20260226_11.jpg"
+            # if(file_path.name != snow_free_image and file_path.name != snow_image):
+            #     continue
             
             img = cv2.imread(str(file_path))
             figure = plt.figure(figsize=(20, 10), num=file_path.name)
@@ -201,10 +145,14 @@ def main():
             ax = plt.gca()
             enable_scroll_zoom_and_pan(ax)
 
-            plt.title("label top and then bottom of full pole \n Click ANYWHERE to confirm | BACKSPACE to undo | RIGHT-CLICK drag | SCROLL zoom.", fontweight="bold")
+            plt.title("label top and then bottom of full pole \n Click ANYWHERE to confirm | BACKSPACE to undo | RIGHT-CLICK drag | SCROLL zoom | ENTER to skip.", fontweight="bold")
             plt.tight_layout()
             points = plt.ginput(7, timeout=0, mouse_pop=2)
             plt.close()
+
+            if len(points) < 7:
+                print(f"Skipping {file_path.name} (Not enough points collected / User skipped)")
+                continue  # This jumps to the next file in your loop
             
             creation_time = os.path.getmtime(file_path)
             formatted_datetime = datetime.datetime.fromtimestamp(creation_time).strftime("%m/%d/%Y %H:%M")
