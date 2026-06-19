@@ -4,8 +4,9 @@ import os
 
 # Argument parser
 class ArgumentParser():
-    def __init__(self, description=""):
+    def __init__(self, description="", job_fields=None):
         self.parser = argparse.ArgumentParser(description=description)
+        self.job_fields = job_fields
         self._add_arguments()
         self.args = self.parser.parse_args()
         self._get_arguments()
@@ -53,6 +54,10 @@ class ArgumentParser():
         if not self.args.no_confirm:
             print("\n\n# The following options were specified in config.toml or as arguments:\n")
 
+            #Can be added as condition to print only relevant fields
+            def is_relevant(field_name):
+                return self.job_fields is None or field_name in self.job_fields
+            
             if(self.args.model.startswith("/")):
                 print(f'Model to use:\n{self.args.model}\n')
             else:
@@ -75,15 +80,12 @@ class ArgumentParser():
             else:
                 print(f"Directory where images output will be stored:\n{os.getcwd()}/{self.args.images_output}\n")
 
-            #TODO: needs refactoring
-            # if(self.args.subset_to_label != ''):
-            #     print(f"Images to label:\nEvery {self.args.subset_to_label} images")
+            if(is_relevant("label")):
+                print(f"Images to label:\nEvery {self.args.subset_to_label} images")
             
-            # if(self.args.lr != ''):
-            #     print("LR:\n" + str(self.args.lr) + "\n")
-            
-            # if(self.args.epochs != ''):
-            #     print("Epochs:\n" + str(self.args.epochs) + "\n")
+            if(is_relevant("train")):
+                print("LR:\n" + str(self.args.lr) + "\n")
+                print("Epochs:\n" + str(self.args.epochs) + "\n")
 
             confirmation = str(input("\nIs this OK? (y/n) "))
             if confirmation.lower() != "y":

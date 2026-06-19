@@ -5,9 +5,7 @@ import math
 import pandas as pd
 from arg_parser import ArgumentParser
 
-args = ArgumentParser()
-
-def valid_keypoints_plot(image, outputs, orig_keypoints, epoch):
+def valid_keypoints_plot(args, image, outputs, orig_keypoints, epoch):
     """
     This function plots the regressed (predicted) keypoints and the actual 
     keypoints after each validation epoch for one image in the batch.
@@ -61,7 +59,7 @@ def dataset_keypoints_plot(data):
     plt.close()
 
 
-def eval_keypoints_plot(file, image, outputs, eval, orig_keypoints): 
+def eval_keypoints_plot(args, file, image, outputs, eval, orig_keypoints): 
     """
     This function plots the regressed (predicted) keypoints and the actual 
     keypoints after each validation epoch for one image in the batch.

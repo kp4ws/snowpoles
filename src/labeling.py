@@ -45,7 +45,7 @@ STAKES = ["1", "2", "3"]
 
 def main():
     # Argument parser for command-line arguments:
-    args = ArgumentParser("Manually label images for training")
+    args = ArgumentParser("Manually label images for training", "label")
 
     ## labeling data
     camera_ids = []

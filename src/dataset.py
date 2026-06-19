@@ -80,33 +80,34 @@ def train_test_split(csv_path, image_path):
     df_data = pd.read_csv(csv_path)
     print(f'all rows in df_data {len(df_data.index)}')
 
-    training_samples = df_data.sample(frac=0.8, random_state=100) # same shuffle everytime
-    valid_samples = df_data[~df_data.index.isin(training_samples.index)]
-
     ## check to make sure we only use images that exist
     all_images = list(Path(image_path).rglob("*.JPG"))
-    
+
     global parents
     parents = {}
     for i in all_images:
         parents[i.name] = str(i)
-    filenames = [img.name for img in all_images]
-    valid_samples = valid_samples[
-        valid_samples["filename"].isin(filenames)
-    ].reset_index()
-    training_samples = training_samples[
-        training_samples["filename"].isin(filenames)
-    ].reset_index()
+    existing_filenames = [img.name for img in all_images]
+    
+    #Filter df_data to ensure we only have existing filenames
+    df_existing = df_data[df_data["filename"].isin(existing_filenames).reset_index(drop=True)]
 
+    #Perform 80/20 split on training and validation data
+    training_samples = df_existing.sample(frac=0.8, random_state=100) # same shuffle everytime
+    validation_samples = df_existing[~df_existing.index.isin(training_samples.index)]
+
+    #Reset indices
+    training_samples = training_samples.reset_index(drop=True)
+    validation_samples = validation_samples.reset_index(drop=True)
+    
     # save labels to output folder
     if not os.path.exists(f"{config['paths']['models_output']}"):
         os.makedirs(f"{config['paths']['models_output']}", exist_ok=True)
     training_samples.to_csv(f"{config['paths']['models_output']}/training_samples.csv")
-    valid_samples.to_csv(f"{config['paths']['models_output']}/valid_samples.csv")
+    validation_samples.to_csv(f"{config['paths']['models_output']}/validation_samples.csv")
 
-    print(f'# of examples we will now train on {len(training_samples)}, val on {len(valid_samples)}')
-
-    return training_samples, valid_samples
+    print(f'# of examples we will now train on {len(training_samples)}, val on {len(validation_samples)}')
+    return training_samples, validation_samples
 
 class snowPoleDataset(Dataset):
 
@@ -135,60 +136,66 @@ class snowPoleDataset(Dataset):
         return len(self.data)
 
     def __filename__(self, index):
-
-        filename = self.data.iloc[index]['filename']
-        return filename
+        return self.data.iloc[index]['filename']
     
     def __getitem__(self, index):
-        #IPython.embed()
-        cameraID = self.data.iloc[index]["filename"].split("_")[0]  
-        filename = self.data.iloc[index]["filename"]
+        #Grab row for given index
+        row = self.data.iloc[index]
+        filename = row['filename']
+        cameraID = row['camera_id']
 
+        #Read and prepare image
         image = cv2.imread(parents[self.data.iloc[index]["filename"]])
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         orig_h, orig_w, channel = image.shape
+
+        #Scale pixel values to [0, 1] and resize to 224x224
         image = image / 255.0
-        
         # resize the image into `resize` defined above
         image = cv2.resize(image, (self.resize, self.resize))
-        #IPython.embed()
+
+        #Apply HSV snow filter (if turned on in config)
         if config['training']['filter']: 
             image = apply_filter(image)
             if index % 100: 
                 cv2.imwrite(f"{config['paths']['models_output']}/filtered_{filename}", image)
-        #image = image / 255.0
-        # get the keypoints
-        keypoints = self.data.iloc[index][1:][['x1','y1','x2','y2']]  #[3:7]  ### change to x1 y1 x2 y2
-        
-        # adonis neg values # 
-        keypoints = keypoints.clip(lower=0)
 
-        keypoints = np.array(keypoints, dtype='float32')
-        # reshape the keypoints
+        #The columns that correspond to the keypoints in our dataframe
+        keypoint_columns = [
+            's1_x1', 's1_y1', 's1_x2', 's1_y2',
+            's2_x1', 's2_y1', 's2_x2', 's2_y2',
+            's3_x1', 's3_y1', 's3_x2', 's3_y2'
+        ]
+
+        # #Clip negative noise values to 0 and convert to float32 type
+        keypoints = row[keypoint_columns].clip(lower=0).values.astype('float32')
+
+        # #Reshape from a flat 12 element array to (6, 2) matrix for Albumentations
         keypoints = keypoints.reshape(-1, 2)
 
+        #Scale coordinates to match new 224x224 canvas dimensions
         keypoints = keypoints * [self.resize / orig_w, self.resize / orig_h]
 
+        #Pass image and 6 keypoints to albumentations
         transformed = self.transform(image=image, keypoints=keypoints)
         img_transformed = transformed['image']
         keypoints = transformed['keypoints']
 
         # viz training data
-
         #utils.vis_keypoints(transformed['image'], transformed['keypoints'])
         image = np.transpose(img_transformed, (2, 0, 1))
 
-        if len(keypoints) != 2:
+        if len(keypoints) != 6:
             utils.vis_keypoints(transformed['image'], transformed['keypoints'])
 
         return {
             'image': torch.tensor(image, dtype=torch.float),
-            'keypoints': torch.tensor(keypoints, dtype=torch.float),
+            'keypoints': torch.tensor(keypoints, dtype=torch.float).view(-1), #Flatten back to vector of 12 values for output layer
             'filename': filename
         }
 
 # get the training and validation data samples
-training_samples, valid_samples = train_test_split(
+training_samples, validation_samples = train_test_split(
     f"{config['paths']['labels']}", config['paths']['input_images']
 )
 
@@ -201,28 +208,29 @@ train_data = snowPoleDataset(
     aug=config['training']['aug'],
 )  ## we want all folders
 
-valid_data = snowPoleDataset(
-    valid_samples, f"{config['paths']['input_images']}", aug=False
+validation_data = snowPoleDataset(
+    validation_samples, 
+    f"{config['paths']['input_images']}", 
+    aug=False
 )  # we always want the transform to be the normal transform
 
-# prepare data loaders
+# # prepare data loaders
 train_loader = DataLoader(
-    train_data, batch_size=config['training']['batch_size'], shuffle=True, num_workers=0
+    train_data, 
+    batch_size=config['training']['batch_size'], 
+    shuffle=True, 
+    num_workers=0
 )
-valid_loader = DataLoader(
-    valid_data,
+validation_loader = DataLoader(
+    validation_data,
     batch_size=config['training']['batch_size'],
     shuffle=False,
     num_workers=0,
 )
 
 print(f"Training sample instances: {len(train_data)}")
-print(f"Validation sample instances: {len(valid_data)}")
+print(f"Validation sample instances: {len(validation_data)}")
 
 if config["training"]["show_dataset_plot"]:
     utils.dataset_keypoints_plot(train_data)
-    utils.dataset_keypoints_plot(valid_data)
-
-
-
-
+    utils.dataset_keypoints_plot(validation_data)

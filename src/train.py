@@ -17,112 +17,7 @@ tensorboard --logdir=runs
 '''
 
 # Import startup libraries
-import argparse
-import tomli as tomllib
 import os
-
-# Argument parser
-parser = argparse.ArgumentParser(description="Train a model on a set of images")
-parser.add_argument(
-    "--model",
-    required=False,
-    help='model to train, default is "models/CO_and_WA_model.pth"',
-)
-parser.add_argument("--path", help="directory where images are located")
-parser.add_argument(
-    "--device", required=False, help='device to use for training ("cpu" or "cuda")'
-)
-parser.add_argument(
-    "--output", required=False, help="directory in which to store trained models"
-)
-parser.add_argument(
-    "--epochs", required=False, help="epochs"
-)
-parser.add_argument(
-    "--lr", required=False, help="the learning rate of the model"
-)
-parser.add_argument(
-    "--no_confirm", required=False, help="skip confirmation", action="store_true"
-)
-args = parser.parse_args()
-
-# Get arguments from config file if they weren't specified
-with open("config.toml", "rb") as configfile:
-    config = tomllib.load(configfile)
-if not args.model:
-    args.model = config["paths"]["trainee_model"]
-if not args.path:
-    args.path = config["paths"]["input_images"]
-if not args.device:
-    args.device = config["training"]["device"]
-if not args.output:
-    args.output = config["paths"]["models_output"]
-if not args.epochs:
-    args.epochs = config["training"]["epochs"]
-if not args.lr:
-    args.lr = config["training"]["lr"]
-
-# Confirmation
-if not args.no_confirm:
-    print(
-        "\n\n# The following options were specified in config.toml or as arguments:\n"
-    )
-    if (args.model.startswith("/")):
-        print(
-            "Model to train:\n"
-            + str(args.model)
-            + "\n"
-        )
-    else:
-        print(
-            "Model to train:\n"
-            + os.getcwd()
-            + "/"
-            + str(args.model)
-            + "\n"
-        )
-    if (args.path.startswith("/")):
-        print(
-            "Directory where images are located:\n"
-            + str(args.path)
-            + "\n"
-        )
-    else:
-        print(
-            "Directory where images are located:\n"
-            + os.getcwd()
-            + "/"
-            + str(args.path)
-            + "\n"
-        )
-    print("Device to use:\n" + args.device + "\n")
-    if (args.output.startswith("/")):
-        print(
-            "Directory where generated models will be stored:\n"
-            + str(args.output)
-            + "\n"
-        )
-    else:
-        print(
-            "Directory where generated models will be stored:\n"
-            + os.getcwd()
-            + "/"
-            + str(args.output)
-            + "\n"
-        )
-    print("LR:\n" + str(args.lr) + "\n")
-    print("Epochs:\n" + str(args.epochs) + "\n")
-    confirmation = str(input("\nIs this OK? (y/n) "))
-    if confirmation.lower() != "y":
-        if confirmation.lower() == "n":
-            print(
-                "\nEdit the config file, located at",
-                os.getcwd()
-                + "/config.toml, to your liking, or edit the command line arguments if they were specified, and then re-run this file.\n",
-            )
-        else:
-            print("Invalid input.\n")
-        quit()
 
 # Import all libraries
 import torch
@@ -136,29 +31,34 @@ from tqdm import tqdm
 import IPython
 import numpy as np
 from pathlib import Path
-from model_download import download_models
-from dataset import train_data, train_loader, valid_data, valid_loader
+from dataset import train_data, train_loader, validation_data, validation_loader
+# training viz 
+from torch.utils.tensorboard import SummaryWriter  # For PyTorch
+import copy
+
+from arg_parser import ArgumentParser
+
+# Argument parser
+args = ArgumentParser("Train a model on a set of images", "train")
 
 matplotlib.style.use('ggplot')
 # start_time = time.time() 
 
-# training viz 
-from torch.utils.tensorboard import SummaryWriter  # For PyTorch
-
 writer = SummaryWriter(f'runs/trained_alaska_cnn_onepole')
 
-
 ## create output path
-if not os.path.exists(f"{args.output}"):
-    os.makedirs(f"{args.output}", exist_ok=True)
-
+if not os.path.exists(f"{args.models_output}"):
+    os.makedirs(f"{args.models_output}", exist_ok=True)
 
 # model
-model = snowPoleResNet50(pretrained=True, requires_grad=False).to(args.device)
+model = snowPoleResNet50(pretrained=True, requires_grad=True).to(args.device)
 
-checkpoint = torch.load(args.model, map_location=torch.device(args.device), weights_only=False)
-model.load_state_dict(checkpoint["model_state_dict"])
-print("fine-tuned model loaded...")
+#NOTE: No longer using CO_and_WA_model.pth
+#Commented out because we want train.py to build a model from ground up (without using an existing checkpoint)
+# checkpoint = torch.load(args.model, map_location=torch.device(args.device), weights_only=False)
+# model.load_state_dict(checkpoint["model_state_dict"])
+
+# print("fine-tuned model loaded...")
 
 # optimizer
 optimizer = optim.Adam(model.parameters(), lr=args.lr)
@@ -172,7 +72,7 @@ def fit(model, dataloader, data):
 
     #.embed()
     print('Training')
-    model.to(config['training']['device']) ##
+    model.to(args.device) ##
 
     model.train()
     train_running_loss = 0.0
@@ -186,8 +86,6 @@ def fit(model, dataloader, data):
             args.device
         )
 
-        # flatten the keypoints
-        keypoints = keypoints.view(keypoints.size(0), -1)
         optimizer.zero_grad()
         outputs = model(image)
         loss = criterion(outputs, keypoints)
@@ -217,19 +115,17 @@ def validate(model, dataloader, data, epoch):
                 args.device
             )
 
-            # flatten the keypoints
-            keypoints = keypoints.view(keypoints.size(0), -1)
             outputs = model(image)
             loss = criterion(outputs, keypoints) ## cross entropy loss between input and output
             valid_running_loss += loss.item()
             # plot the predicted validation keypoints after every...
             # ... predefined number of epochs
-            if not os.path.exists(args.output):
-                os.makedirs(args.output, exist_ok=True)
+            if not os.path.exists(args.models_output):
+                os.makedirs(args.models_output, exist_ok=True)
             if (
                 epoch + 1
             ) % 1 == 0 or i == 20:  # make this not 0 to get a different image
-                utils.valid_keypoints_plot(image, outputs, keypoints, epoch)
+                utils.valid_keypoints_plot(args, image, outputs, keypoints, epoch)
         
     valid_loss = valid_running_loss/counter
     return valid_loss
@@ -246,7 +142,7 @@ for epoch in range(args.epochs):
 
     print(f"Epoch {epoch+1} of {args.epochs}")
     train_epoch_loss = fit(model, train_loader, train_data)
-    val_epoch_loss = validate(model, valid_loader, valid_data, epoch)
+    val_epoch_loss = validate(model, validation_loader, validation_data, epoch)
     train_loss.append(train_epoch_loss)
     val_loss.append(val_epoch_loss)
     print(f"Train Loss: {train_epoch_loss:.4f}")
@@ -260,7 +156,7 @@ for epoch in range(args.epochs):
                 "optimizer_state_dict": optimizer.state_dict(),
                 "loss": criterion,
             },
-            f"{args.output}/model_epoch{epoch}.pth",
+            f"{args.models_output}/model_epoch{epoch}.pth",
         )
 
     writer.add_scalar('Loss/train',train_epoch_loss, epoch)
@@ -289,7 +185,7 @@ plt.grid(True, color='lightgrey', linestyle='-', linewidth=0.5)
 plt.gca().set_axisbelow(True)  # Put grid lines behind the plot lines
 ##
 
-plt.savefig(f"{args.output}/loss.png")
+plt.savefig(f"{args.models_output}/loss.png")
 plt.close()  # changed from plt.show()
 torch.save(
     {
@@ -298,7 +194,7 @@ torch.save(
         "optimizer_state_dict": optimizer.state_dict(),
         "loss": criterion,
     },
-    f"{args.output}/model.pth",
+    f"{args.models_output}/model.pth",
 )  ### the last model
 writer.close()
 print("DONE TRAINING")
