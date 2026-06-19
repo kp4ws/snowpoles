@@ -44,7 +44,8 @@ args = ArgumentParser("Train a model on a set of images", "train")
 matplotlib.style.use('ggplot')
 # start_time = time.time() 
 
-writer = SummaryWriter(f'runs/trained_alaska_cnn_onepole')
+#TODO: figure out if there's a better place to write summary
+writer = SummaryWriter(f'runs/CHRL_2026')
 
 ## create output path
 if not os.path.exists(f"{args.models_output}"):
