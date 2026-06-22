@@ -11,7 +11,7 @@ import torch.nn.functional as F
 import pretrainedmodels
 
 class snowPoleResNet50(nn.Module):
-    def __init__(self, pretrained, requires_grad, number_of_poles=3):
+    def __init__(self, pretrained, requires_grad, num_keypoints = 12):
     #def __init__(self, pretrained, requires_grad, input_size, hidden_size, num_layers, num_classes):
         super(snowPoleResNet50, self).__init__()
         if pretrained == True:
@@ -29,7 +29,7 @@ class snowPoleResNet50(nn.Module):
         # change the final layer
         
         #Final layer of neural network
-        self.l0 = nn.Linear(2048, number_of_poles * 4)  #### the second value is the number of points you want to predict
+        self.l0 = nn.Linear(2048, num_keypoints)  #### the second value is the number of points you want to predict
 
     def forward(self, x):
         # get the batch size only, ignore (c, h, w)

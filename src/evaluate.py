@@ -14,118 +14,28 @@ python src/evaluate.py
 import argparse
 import tomli as tomllib
 import os
-
-# Argument parser
-parser = argparse.ArgumentParser(description="Evaluate model on the train/val images")
-parser.add_argument(
-    "--model",
-    required=False,
-    help='model to train, default is "models/CO_and_WA_model.pth"',
-)
-parser.add_argument("--path", help="directory where images are located")
-parser.add_argument(
-    "--device", required=False, help='device to use for training ("cpu" or "cuda")'
-)
-parser.add_argument(
-    "--output", required=False, help="directory in which to store eval results"
-)
-parser.add_argument(
-    "--no_confirm", required=False, help="skip confirmation", action="store_true"
-)
-args = parser.parse_args()
-
-# Get arguments from config file if they weren't specified
-with open("config.toml", "rb") as configfile:
-    config = tomllib.load(configfile)
-if not args.model:
-    args.model = config["paths"]["models_output"]
-if not args.path:
-    args.path = config["paths"]["input_images"]
-if not args.device:
-    args.device = config["training"]["device"]
-if not args.output:
-    args.output = config["paths"]["models_output"]
-
-# Confirmation
-if not args.no_confirm:
-    print(
-        "\n\n# The following options were specified in config.toml or as arguments:\n"
-    )
-    if (args.model.startswith("/")):
-        print(
-            "Model to evaluate:\n"
-            + str(args.model)
-            + "\n"
-        )
-    else:
-        print(
-            "Model to evaluate:\n"
-            + os.getcwd()
-            + "/"
-            + str(args.model)
-            + "\n"
-        )
-    if (args.path.startswith("/")):
-        print(
-            "Directory where images are located:\n"
-            + str(args.path)
-            + "\n"
-        )
-    else:
-        print(
-            "Directory where images are located:\n"
-            + os.getcwd()
-            + "/"
-            + str(args.path)
-            + "\n"
-        )
-    print("Device to use:\n" + args.device + "\n")
-    if (args.output.startswith("/")):
-        print(
-            "Directory where evaluation results will be stored:\n"
-            + str(args.output)
-            + "\n"
-        )
-    else:
-        print(
-            "Directory where evaluation results will be stored:\n"
-            + os.getcwd()
-            + "/"
-            + str(args.output)
-            + "\n"
-        )
-    confirmation = str(input("\nIs this OK? (y/n) "))
-    if confirmation.lower() != "y":
-        if confirmation.lower() == "n":
-            print(
-                "\nEdit the config file, located at",
-                os.getcwd()
-                + "/config.toml, to your liking, or edit the command line arguments if they were specified, and then re-run this file.\n",
-            )
-        else:
-            print("Invalid input.\n")
-        quit()
-
-
 import torch
 import numpy as np
-import config
 from model import snowPoleResNet50
 import IPython
 import utils
 import pandas as pd
-from dataset import train_data, valid_data
+from dataset import train_data, validation_data
 from tqdm import tqdm
 from scipy.spatial import distance
 import os
 import matplotlib.pyplot as plt
+from arg_parser import ArgumentParser
+
+# Argument parser
+args = ArgumentParser("Evaluate model on the train/val images")
 
 def load_model():
     model = snowPoleResNet50(pretrained=False, requires_grad=False).to(args.device)
     # load the model checkpoint
-    model_path = f"{args.model}/model.pth"
+    model_path = f"{args.models_output}/model.pth"
     checkpoint = torch.load(model_path, map_location=torch.device(args.device), weights_only=False)
-    print(f"loading model from the following path: {args.model}")
+    print(f"loading model from the following path: {args.models_output}")
     # load model weights state_dict
     model.load_state_dict(checkpoint['model_state_dict'])
     model.eval()
@@ -134,134 +44,164 @@ def load_model():
 
 def predict(model, data, eval='eval'): 
 
-    if not os.path.exists(f"{args.output}/{eval}"):
-        os.makedirs(f"{args.output}/{eval}", exist_ok=True)
+    if not os.path.exists(f"{args.models_output}/{eval}"):
+        os.makedirs(f"{args.models_output}/{eval}", exist_ok=True)
 
-    output_list = []
-    Cameras, filenames = [], []
-    x1s_true, y1s_true, x2s_true, y2s_true = [], [], [], []
-    x1s_pred, y1s_pred, x2s_pred, y2s_pred = [], [], [], []
-    top_pixel_errors, bottom_pixel_errors, total_length_pixels = [], [], []
-    total_length_pixel_actuals = []
-    mape_errors = []
-    mape_errors_sd = []
-    mape_errors_sd_clean = []
+    evaluation_data = {
+        "camera": [],
+        "filename": []
+    }
 
-    automated_sds, manual_sds, diff_sds = [], [], []
-
-    metadata =  pd.read_csv(f"{config.metadata}")
-    labels =  pd.read_csv(f"{config.labels}")
+    metadata =  pd.read_csv(f"{args.path}/pole_metadata.csv")
+    labels =  pd.read_csv(f"{args.path}/labels.csv")
 
     with torch.no_grad():
         for i, data in tqdm(enumerate(data)): 
-            image, keypoints = data['image'].to(args.device), data['keypoints'].to(config.DEVICE)
+            image, keypoints = data['image'].to(args.device), data['keypoints'].to(args.device)
             filename = data['filename']
-            Camera = filename.split('_W')[0]
+            camera = filename.split('_W')[0]
             #Camera = "_".join(filename.split("_")[:2])
 
-            # flatten the keypoints
-            keypoints = keypoints.detach().cpu().numpy().reshape(-1,2)
-            x1_true, y1_true, x2_true, y2_true = keypoints[0,0], keypoints[0,1], keypoints[1,0], keypoints[1,1]
+            evaluation_data["camera"].append(camera)
+            evaluation_data['filename'].append(filename)
+
             ## add an empty dimension for sample size
             image = image.unsqueeze(0)
             outputs = model(image)
             outputs = outputs.detach().cpu().numpy()
-            
-            utils.eval_keypoints_plot(filename, image, outputs, eval, orig_keypoints=keypoints) ## visualize points
             pred_keypoint = np.array(outputs[0], dtype='float32')
-            x1_pred, y1_pred, x2_pred, y2_pred = pred_keypoint[0], pred_keypoint[1], pred_keypoint[2], pred_keypoint[3]
-            
-            Cameras.append(Camera)
-            filenames.append(filename)
-            x1s_true.append(x1_true), y1s_true.append(y1_true), x2s_true.append(x2_true), y2s_true.append(y2_true)
-            x1s_pred.append(x1_pred), y1s_pred.append(y1_pred), x2s_pred.append(x2_pred), y2s_pred.append(y2_pred)
-            
-            ## outputs proj and in cm
-            total_length_pixel = distance.euclidean([x1_pred,y1_pred],[x2_pred,y2_pred])
-            try: 
-                full_length_pole_cm = metadata[metadata['camera_id'] == Camera]['pole_length_cm'].values[0]
-                pixel_cm_conversion = metadata[metadata['camera_id'] == Camera]['pixel_cm_conversion'].values[0] 
-                automated_sd = full_length_pole_cm - (pixel_cm_conversion * total_length_pixel)
-            
-            except Exception: 
-                print(Camera)
-                IPython.embed()
-            automated_sds.append(automated_sd)
 
-            # ## difference between automated and manual
-            manual_pixel_length = labels[labels['filename'] == filename]['PixelLengths'].values[0]
-            manual_snowdepth = full_length_pole_cm - (pixel_cm_conversion * manual_pixel_length)
-            difference = manual_snowdepth - automated_sd
-            manual_sds.append(manual_snowdepth), diff_sds.append(difference)
-
-            ## error
-            top_pixel_error = distance.euclidean([x1_true,y1_true], [x1_pred,y1_pred])
-            bottom_pixel_error = distance.euclidean([x2_true,y2_true], [x2_pred,y2_pred])
-            total_length_pixel = distance.euclidean([x1_pred,y1_pred],[x2_pred,y2_pred])
-            total_length_pixel_actual = distance.euclidean([x1_true,y1_true],[x2_true,y2_true])
-
-            # MAPE
-            mape_error = utils.MAPE(total_length_pixel_actual, total_length_pixel)
-            mape_error_sd = utils.MAPE(manual_snowdepth, automated_sd)
-            mape_errors_sd.append(mape_error_sd)
+            # flatten the keypoints
+            keypoints = keypoints.detach().cpu().numpy().reshape(-1,2)
+            utils.eval_keypoints_plot(args, filename, image, outputs, eval, orig_keypoints=keypoints) ## visualize points
             
-            top_pixel_errors.append(top_pixel_error), bottom_pixel_errors.append(bottom_pixel_error), total_length_pixels.append(total_length_pixel)
-            total_length_pixel_actuals.append(total_length_pixel_actual), mape_errors.append(mape_error)
+            for j in range(args.number_of_poles):
+                poleId = j+1
+                
+                x1_true = keypoints[2*j, 0]
+                y1_true = keypoints[2*j, 1]
+                x2_true = keypoints[2*j + 1, 0]
+                y2_true = keypoints[2*j + 1, 1]
+
+                x1_pred = pred_keypoint[4*j + 0]
+                y1_pred = pred_keypoint[4*j + 1]
+                x2_pred = pred_keypoint[4*j + 2]
+                y2_pred = pred_keypoint[4*j + 3]
+                
+                ## outputs proj and in cm
+                total_length_pixel = distance.euclidean([x1_pred, y1_pred], [x2_pred, y2_pred])
+                
+                try:
+                    camera_meta = metadata[metadata['camera_id'] == camera]
+                    full_length_pole_cm = camera_meta['pole_length_cm'].values[j] #TODO if metadata format changes to 1 line per row, this needs updating
+                    pixel_cm_conversion = camera_meta['pixel_cm_conversion'].values[j]
+                    automated_sd = full_length_pole_cm - (pixel_cm_conversion * total_length_pixel)
+
+                    img_row = labels[labels['filename'] == filename]
+                    manual_pixel_length = img_row[f's{poleId}_pixel_length'].values[0]
+                    manual_snowdepth = full_length_pole_cm - (pixel_cm_conversion * manual_pixel_length)
+                    difference = manual_snowdepth - automated_sd
+
+                    ## error
+                    top_pixel_error = distance.euclidean([x1_true, y1_true], [x1_pred, y1_pred])
+                    bottom_pixel_error = distance.euclidean([x2_true, y2_true], [x2_pred, y2_pred])
+                    total_length_pixel = distance.euclidean([x1_pred, y1_pred],[x2_pred, y2_pred])
+                    total_length_pixel_actual = distance.euclidean([x1_true, y1_true],[x2_true, y2_true])
+
+                    # MAPE
+                    mape_error = utils.MAPE(total_length_pixel_actual, total_length_pixel)
+                    mape_error_sd = utils.MAPE(manual_snowdepth, automated_sd)
+
+                except Exception as e:
+                    print(f"Error computing error metrics for {filename}, Pole {poleId}: {e}")
+                    #Fallback, set all values to 0
+                    full_length_pole_cm, pixel_cm_conversion = 0, 0
+                    manual_pixel_length, manual_snowdepth, difference = 0, 0, 0
+                    top_pixel_error, bottom_pixel_error = 0, 0
+                    mape_error, mape_error_sd = 0, 0
+
+                #Append flat dynamic row into evaluation data
+                for key, val in [
+                    (f"s{poleId}_x1_true", x1_true),
+                    (f"s{poleId}_y1_true", y1_true),
+                    (f"s{poleId}_x2_true", x2_true),
+                    (f"s{poleId}_y2_true", y2_true),
+
+                    (f"s{poleId}_x1_pred", x1_pred),
+                    (f"s{poleId}_y1_pred", y1_pred),
+                    (f"s{poleId}_x2_pred", x2_pred),
+                    (f"s{poleId}_y2_pred", y2_pred),
+
+                    (f"s{poleId}_total_length_pixel", total_length_pixel),
+                    (f"s{poleId}_full_length_pole_cm", full_length_pole_cm),
+                    (f"s{poleId}_pixel_cm_conversion", pixel_cm_conversion),
+                    
+                    (f"s{poleId}_automated_sd", automated_sd),
+
+                    (f"s{poleId}_manual_pixel_length", manual_pixel_length),
+                    (f"s{poleId}_manual_snowdepth", manual_snowdepth),
+                    (f"s{poleId}_difference_cm", difference),
+                    (f"s{poleId}_top_pixel_error", top_pixel_error),
+                    (f"s{poleId}_bottom_pixel_error", bottom_pixel_error),
+                    (f"s{poleId}_mape", mape_error),
+                    (f"s{poleId}_mape_sd", mape_error_sd),
+                ]:
+                    if key not in evaluation_data:
+                        evaluation_data[key] = [None] * i
+                    evaluation_data[key].append(val)
     
-    results = pd.DataFrame({'Camera':Cameras, 'filename':filenames, 'x1_true':x1s_true, 'y1_true':y1s_true, 'x2_true':x2s_true, 'y2_true':y2s_true, \
-        'x1_pred': x1s_pred, 'y1s_pred': y1s_pred, 'x2_pred': x2s_pred, 'y2_pred': y2s_pred, 'top_pixel_error': top_pixel_errors, \
-            'bottom_pixel_error': bottom_pixel_errors, 'total_length_pixel': total_length_pixels, 'total_length_pixel_actual': total_length_pixel_actuals,
-            'automated_depth':automated_sds,'manual_snowdepth':manual_sds,'difference':diff_sds, 'mape':mape_errors,'mape_sd':mape_errors_sd})
+    results = pd.DataFrame(evaluation_data)
+    results.to_csv(f"{args.models_output}/{eval}/indiv_img_eval_results.csv")
 
-    results.to_csv(f"{args.output}/{eval}/indiv_img_eval_results.csv")
-    #### overall average
-    print('Overall Top Pixel Error')
-    print(f"{np.mean(top_pixel_errors)} +/- {np.std(top_pixel_errors)} \n")
-    print('Overall Bottom Pixel Error')
-    print(f"{np.mean(bottom_pixel_errors)} +/- {np.std(bottom_pixel_errors)} \n")
-    print(f"Mean Average Percent Error (MAPE):")
-    print(f"{np.mean(mape_errors)} +/- {np.std(mape_errors)} \n")
-    print('Overall difference in cm')
-    print(f"{np.mean(diff_sds)} +/- {np.std(diff_sds)} \n")
-    print('Overall difference in MAPE')
-    print(f"{np.mean(mape_errors_sd)} +/- {np.std(mape_errors_sd)} \n")
-    print("\n")
-
-    stats_data = {'Metric': [
-            'Top Pixel Error',
-            'Bottom Pixel Error',
-            'Mean Average Percent Error (MAPE)',
-            'Difference in cm',
-            'Difference in MAPE'
-        ],
-        'Mean': [
-            np.mean(top_pixel_errors),
-            np.mean(bottom_pixel_errors),
-            np.mean(mape_errors),
-            np.mean(diff_sds),
-            np.mean(mape_errors_sd)
-        ],
-        'Standard_Deviation': [
-            np.std(top_pixel_errors),
-            np.std(bottom_pixel_errors),
-            np.std(mape_errors),
-            np.std(diff_sds),
-            np.std(mape_errors_sd)
-        ]
+    metric_substrings = {
+        "Top Pixel Error": "_top_pixel_error",
+        "Bottom Pixel Error": "_bottom_pixel_error",
+        "Mean Average Percent Error (MAPE)": "_mape",
+        "Difference in cm": "_difference_cm",
+        "Difference in MAPE": "_mape_sd",
     }
 
-    # Create DataFrame
-    df = pd.DataFrame(stats_data)
+    stats_data = {"Metric": [], "Mean": [], "Standard_Deviation": []}
 
-    # Save to CSV
-    df.to_csv(f"{args.output}/{eval}/overall_statistics.csv", index=False)
+    print("#### Overall average\n")
+
+    for metric_label, substring in metric_substrings.items():
+        #Find all columns in results containing substring
+        metric_cols = [col for col in results.columns if col.endswith(substring)]
+
+        if metric_cols:
+            #Flatten all columns
+            all_values = results[metric_cols].to_numpy().flatten()
+
+            #Remove any None or Nan
+            all_values = all_values[all_values != None]
+            all_values = all_values[~np.isnan(all_values.astype(float))]
+
+            mean_val = np.mean(all_values)
+            std_val = np.std(all_values)
+
+            print(f"{metric_label}")
+            print(f"{mean_val} +/- {std_val} \n")
+
+            stats_data['Metric'].append(metric_label)
+            stats_data['Mean'].append(mean_val)
+            stats_data['Standard_Deviation'].append(std_val)
+
+        else:
+            print(f"Warning: no data columns found matching suffix {substring}\n")
+        
+    print("\n")
+
+    # Create DataFrame and save to CSV
+    df = pd.DataFrame(stats_data)
+    df.to_csv(f"{args.models_output}/{eval}/overall_statistics.csv", index=False)
 
     return results
 
 def main():
     model = load_model()
     print('results on valid data\n')
-    outputs = predict(model, valid_data)
+    outputs = predict(model, validation_data)
 
 if __name__ == '__main__':
     main()

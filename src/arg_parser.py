@@ -21,6 +21,7 @@ class ArgumentParser():
         # self.parser.add_argument("--datapath", help="(deprecated) directory where images are located")
         self.parser.add_argument("--path", help="directory where images are located")
         self.parser.add_argument("--subset_to_label", help="label every N images")
+        self.parser.add_argument("--number_of_poles", help="number of snow poles each camera has")
         self.parser.add_argument("--device", required=False, help='device to use for processing ("cpu" or "cuda")')
         self.parser.add_argument("--models_output", required=False, help="directory in which to store models output")
         self.parser.add_argument("--images_output", required=False, help="directory in which to store images output")
@@ -41,6 +42,8 @@ class ArgumentParser():
                 self.args.device = config["training"]["device"]
             if not self.args.subset_to_label:
                 self.args.subset_to_label = config["labeling"]["subset_to_label"]
+            if not self.args.number_of_poles:
+                self.args.number_of_poles = config["labeling"]["number_of_poles"]
             if not self.args.models_output:
                 self.args.models_output = config["paths"]["models_output"]
             if not self.args.images_output:

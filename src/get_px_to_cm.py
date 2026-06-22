@@ -15,9 +15,6 @@ import IPython
 from utils import enable_scroll_zoom_and_pan
 from arg_parser import ArgumentParser
 
-#3 stakes per image
-STAKES = ["1", "2", "3"]
-
 def get_stake_lengths(csv_path: str):
     df = pd.read_csv(csv_path)
     
@@ -88,9 +85,9 @@ def main():
         points = plt.ginput(7, timeout=0, mouse_pop=2)
         plt.close()
         
-        for k, stake in enumerate(STAKES):
-            top = points[2*k] 
-            bottom = points[2*k + 1]
+        for poleIndex in range(args.number_of_poles):
+            top = points[2*poleIndex] 
+            bottom = points[2*poleIndex + 1]
 
             full_pole_length_px = math.dist((top), (bottom))
             full_pole_length_pxs.append(full_pole_length_px)
@@ -98,14 +95,14 @@ def main():
             #NOTE: Instead of doing calibration step (10 cm), we use recorded measurements from file
             # full_pole_length_cm = (10 / math.dist((top_10), (bottom_10))) *  math.dist((top), (bottom))
             measurement_lookup = get_stake_lengths("CHRL_data/stake_measurements_clean.csv")
-            full_pole_length_cm = measurement_lookup[(cameraID, stake)]
+            full_pole_length_cm = measurement_lookup[(cameraID, str(poleIndex+1))] #+1 because poleIndex is 0-index
             pole_length_cms.append(full_pole_length_cm)
 
             conversion = full_pole_length_cm / full_pole_length_px 
             conversions.append(conversion)
             
             meta_camera_ids.append(cameraID)
-            meta_stake_ids.append(stake)
+            meta_stake_ids.append(str(poleIndex+1))
             
             height, width, channel = img.shape
             heights.append(height)

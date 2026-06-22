@@ -35,11 +35,12 @@ from tqdm import tqdm
 import albumentations
 import IPython
 import utils
+from model import snowPoleResNet50
+import torch
 
 from arg_parser import ArgumentParser
 
-def vis_predicted_keypoints(file, image, keypoints, color=(0, 255, 0), diameter=15):
-    import matplotlib.pyplot as plt
+def vis_predicted_keypoints(file, image, keypoints, color=(0, 255, 0), diameter=15, args=None):
     #file = file.split(".")[0]
     file = Path(file).stem  
     output_keypoint = keypoints.reshape(-1, 2)
@@ -49,47 +50,56 @@ def vis_predicted_keypoints(file, image, keypoints, color=(0, 255, 0), diameter=
             plt.plot(output_keypoint[p, 0], output_keypoint[p, 1], 'r.') ## top
         else:
             plt.plot(output_keypoint[p, 0], output_keypoint[p, 1], 'r.') ## bottom
-    plt.savefig(f"{args.model}/predictions/pred_{file}.png")
+
+    plt.savefig(f"{args.models_output}/predictions/pred_{file}.png")
     plt.close()
 
 def load_model(args):
-    from model import snowPoleResNet50
-    import torch
-
     model = snowPoleResNet50(pretrained=False, requires_grad=False).to(args.device)
     # load the model checkpoint
     #torch.serialization.add_safe_globals([torch.nn.modules.loss.SmoothL1Loss])
-    model_path = f"{args.model}/model.pth"
+    model_path = f"{args.models_output}/model.pth"
     checkpoint = torch.load(model_path, map_location=torch.device(args.device), weights_only=False)
     model.load_state_dict(checkpoint['model_state_dict'])
     model.eval()
     return model
 
 def predict(model, args, device):  
-    if not os.path.exists(f"{args.model}/predictions"):
-        os.makedirs(f"{args.model}/predictions", exist_ok=True)
+    if not os.path.exists(f"{args.models_output}/predictions"):
+        os.makedirs(f"{args.models_output}/predictions", exist_ok=True)
 
-    Cameras, filenames = [], []
-    datetimes = []
-    x1s_pred, y1s_pred, x2s_pred, y2s_pred = [], [], [], []
-    total_length_pixels = []
-    snow_depths = []
+    predictions_data = {
+        "camera_id": [],
+        "filename": [],
+        "datetime": [],
+    }
 
     ## folder or directory
     #IPython.embed()
     #snowpolefiles = glob.glob(f"{args.path}/**/*")
     snowpolefiles = list(Path(args.path).rglob("*.JPG"))
-
     metadata = pd.read_csv(f"{args.path}/pole_metadata.csv")
 
     with torch.no_grad():
         for i, file in tqdm(enumerate(snowpolefiles)): 
-    
+            file_path = Path(file)
+            filename = file_path.name
+            camera = file_path.stem.split('_')[0]
+            #filename = file.split('/')[-1]
+            #Camera = filename.split('/')[-1] ## assumes in a folder with camera name ('cam1', 'cam2', etc)
+
+            #TODO: Filter only for CTRL1 camera for now
+            if(camera != 'CTRL1'):
+                continue
+
             image = cv2.imread(str(file))
             creationTime = os.path.getmtime(file)
             dt_c = datetime.datetime.fromtimestamp(creationTime)
             formatted_datetime = dt_c.strftime("%m/%d/%Y %H:%M")
-            datetimes.append(formatted_datetime)
+
+            predictions_data["camera_id"].append(camera)
+            predictions_data["filename"].append(filename)
+            predictions_data['datetime'].append(formatted_datetime)
 
             image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
             h, w, *_ = image.shape
@@ -97,17 +107,10 @@ def predict(model, args, device):
             image = image / 255.0   
 
             # again reshape to add grayscale channel format
-            file_path = Path(file)
-            filename = file_path.name
-            Camera = file_path.stem.split('_')[0]
-            #filename = file.split('/')[-1]
-            #Camera = filename.split('/')[-1] ## assumes in a folder with camera name ('cam1', 'cam2', etc)
             
             ## add an empty dimension for sample size
             image = np.transpose(image, (2, 0, 1)) ## 
-            image = torch.tensor(image, dtype=torch.float)
-            image = image.unsqueeze(0)
-            image = image.to(device)
+            image = torch.tensor(image, dtype=torch.float).unsqueeze(0).to(device)
 
             #######
             outputs = model(image)
@@ -121,35 +124,50 @@ def predict(model, args, device):
 
             ## resize back up to original size and project predicted points onto original size
             image = cv2.resize(image, (w, h))
-            pred_keypoint[0] = pred_keypoint[0] * (w / 224)
-            pred_keypoint[2] = pred_keypoint[2] * (w /224)
-            pred_keypoint[1] = pred_keypoint[1] * (h / 224)
-            pred_keypoint[3] = pred_keypoint[3] * (h /224)
-
-            if i % 100 == 0: vis_predicted_keypoints(filename, image, pred_keypoint,) 
-            x1_pred, y1_pred, x2_pred, y2_pred = pred_keypoint[0], pred_keypoint[1], pred_keypoint[2], pred_keypoint[3]
             
-            Cameras.append(Camera)
-            filenames.append(filename)
-            x1s_pred.append(x1_pred), y1s_pred.append(y1_pred), x2s_pred.append(x2_pred), y2s_pred.append(y2_pred)
-            total_length_pixel = distance.euclidean([x1_pred,y1_pred],[x2_pred,y2_pred])
-            total_length_pixels.append(total_length_pixel)
+            for j in range(args.number_of_poles):
+                poleId = j+1
+                base = 4*j
 
-            ## snow depth conversion ## 
-            try: 
-                full_length_pole_cm = metadata[metadata['camera_id'] == Camera]['pole_length_cm'].values[0]
-                pixel_cm_conversion = metadata[metadata['camera_id'] == Camera]['pixel_cm_conversion'].values[0] 
-                snow_depth = full_length_pole_cm - (pixel_cm_conversion * total_length_pixel)
-                snow_depths.append(snow_depth)
-            except: 
-                ## if you don't have a metadata stored properly it will just insert a 0 for snowdepth
-                snow_depths.append(0)
+                x1_pred = pred_keypoint[base + 0] * (w / 224)
+                y1_pred = pred_keypoint[base + 1] * (h / 224)
+                x2_pred = pred_keypoint[base + 2] * (w / 224)
+                y2_pred = pred_keypoint[base + 3] * (h / 224)
+
+                pred_keypoint[base + 0] = x1_pred
+                pred_keypoint[base + 1] = y1_pred
+                pred_keypoint[base + 2] = x2_pred
+                pred_keypoint[base + 3] = y2_pred
+
+                total_length_pixel = distance.euclidean([x1_pred, y1_pred], [x2_pred, y2_pred])
+                
+                try:
+                    ## snow depth conversion ## 
+                    camera_meta = metadata[metadata['camera_id'] == camera]
+                    full_length_pole_cm = camera_meta['pole_length_cm'].values[j]
+                    pixel_cm_conversion = camera_meta['pixel_cm_conversion'].values[j]
+                    snow_depth = full_length_pole_cm - (pixel_cm_conversion * total_length_pixel)
+                except Exception:
+                    # Fallback default values if metadata lookup or lookup row fails
+                    full_length_pole_cm, pixel_cm_conversion, snow_depth = 0, 0, 0
+                
+                for key, val in [
+                    (f"s{poleId}_x1_pred", x1_pred),
+                    (f"s{poleId}_y1_pred", y1_pred),
+                    (f"s{poleId}_x2_pred", x2_pred),
+                    (f"s{poleId}_y2_pred", y2_pred),
+                    (f"s{poleId}_total_length_pixel", total_length_pixel),
+                    (f"s{poleId}_snow_depth", snow_depth),
+                ]:
+                    if key not in predictions_data:
+                        predictions_data[key] = [None] * i
+                    predictions_data[key].append(val)
+
+            if i % 100 == 0: 
+                vis_predicted_keypoints(filename, image, pred_keypoint, args=args) 
             
-    results = pd.DataFrame({'camera_id':Cameras, 'filename':filenames, 'datetime':datetimes, \
-        'x1_pred': x1s_pred, 'y1_pred': y1s_pred, 'x2_pred': x2s_pred, 'y2_pred': y2s_pred, \
-                            'total_length_pixel': total_length_pixels, 'snow_depth':snow_depths})
-    
-    results.to_csv(f"{args.model}/predictions/results.csv")
+    results = pd.DataFrame(predictions_data)
+    results.to_csv(f"{args.models_output}/predictions/results.csv")
 
     return results
 

@@ -28,35 +28,54 @@ def main():
     predictions = pd.read_csv(f'{args.output}/results.csv')
     metadata = pd.read_csv(f"{args.path}/pole_metadata.csv")
 
-    files = []
-    cameras =[]
-    snow_depths = []
+    depth_data = {
+        "camera_id": [],
+        "filename": [],
+    }
 
-    for filename in tqdm(predictions['filename']):
+    for i, filename in tqdm(enumerate(predictions['filename'])):
         try: 
-            camera = Path(predictions['filename'][0]).name.split('_')[0]
-        
-            full_length_pole_cm = metadata.loc[metadata['camera_id'] == camera, 'pole_length_cm'].iloc[0]
-            pixel_cm_conversion = metadata.loc[metadata['camera_id'] == camera, 'pixel_cm_conversion'].iloc[0]
-            #IPython.embed()
-            ## need to scale back up 
-            x1 = predictions.loc[predictions['filename'] == filename, 'x1_pred'].iloc[0] 
-            y1 = predictions.loc[predictions['filename'] == filename, 'y1_pred'].iloc[0] 
-            x2 = predictions.loc[predictions['filename'] == filename, 'x2_pred'].iloc[0] 
-            y2 = predictions.loc[predictions['filename'] == filename, 'y2_pred'].iloc[0] 
-
-            total_length_pixel = distance.euclidean([x1,y1],[x2,y2])
-            snow_depth = full_length_pole_cm - (pixel_cm_conversion * total_length_pixel)
+            camera = Path(filename).name.split("_")[0]
             
-            files.append(filename)
-            cameras.append(camera)
-            snow_depths.append(snow_depth)
+            depth_data["camera_id"].append(camera)
+            depth_data["filename"].append(filename)
 
-        except: pass
+            camera_meta = metadata[metadata["camera_id"] == camera]
+            img_row = predictions[predictions['filename'] == filename]
+
+            for j in range(args.number_of_poles):
+                poleId = j+1
+
+                full_length_pole_cm = camera_meta['pole_length_cm'].values[j]
+                pixel_cm_conversion = camera_meta['pixel_cm_conversion'].values[j]
+
+                ## need to scale back up 
+                x1 = img_row[f's{poleId}_x1_pred'].values[0] 
+                y1 = img_row[f's{poleId}_y1_pred'].values[0] 
+                x2 = img_row[f's{poleId}_x2_pred'].values[0] 
+                y2 = img_row[f's{poleId}_y2_pred'].values[0]
+
+                total_length_pixel = distance.euclidean([x1,y1],[x2,y2])
+                snow_depth = full_length_pole_cm - (pixel_cm_conversion * total_length_pixel)
+
+                # Append sideways using our matching flat structure pattern
+                for key, val in [
+                    (f"s{poleId}_total_length_pixel", total_length_pixel),
+                    (f"s{poleId}_snowdepth_cm", snow_depth)
+                ]:
+                    if key not in depth_data:
+                        # Pad with None for any previously processed images
+                        depth_data[key] = [None] * i
+                    depth_data[key].append(val)
+
+        except Exception as e:
+            # If a row fails or a column doesn't exist, log it and keep moving
+            print(f"Skipping image {filename} due to processing error: {e}")
+            pass
 
 
-    df = pd.DataFrame({'camera_id': cameras, 'filename': files, 'snowdepth':snow_depths})
-    df.to_csv(f'{args.output}/results_wsnowdepthcm.csv')
+    df = pd.DataFrame(depth_data)
+    df.to_csv(f'{args.output}/results_wsnowdepthcm.csv', index=False)
 
     print(f'saved at {args.output}/results_wsnowdepthcm.csv')
 
