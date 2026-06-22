@@ -157,15 +157,18 @@ class snowPoleDataset(Dataset):
         #Apply HSV snow filter (if turned on in config)
         if config['training']['filter']: 
             image = apply_filter(image)
-            if index % 100: 
+            if index % 100 == 0: 
                 cv2.imwrite(f"{config['paths']['models_output']}/filtered_{filename}", image)
 
         #The columns that correspond to the keypoints in our dataframe
-        keypoint_columns = [
-            's1_x1', 's1_y1', 's1_x2', 's1_y2',
-            's2_x1', 's2_y1', 's2_x2', 's2_y2',
-            's3_x1', 's3_y1', 's3_x2', 's3_y2'
-        ]
+        number_of_poles = config["training"].get("number_of_poles", 3)
+        keypoint_columns = []
+        for p in range(number_of_poles):
+            poleId = p+1
+            keypoint_columns.extend([
+                f's{poleId}_x1', f's{poleId}_y1', 
+                f's{poleId}_x2', f's{poleId}_y2'
+            ])
 
         # #Clip negative noise values to 0 and convert to float32 type
         keypoints = row[keypoint_columns].clip(lower=0).values.astype('float32')
@@ -185,7 +188,8 @@ class snowPoleDataset(Dataset):
         #utils.vis_keypoints(transformed['image'], transformed['keypoints'])
         image = np.transpose(img_transformed, (2, 0, 1))
 
-        if len(keypoints) != 6:
+        expected_points = 2 * number_of_poles
+        if len(keypoints) != expected_points:
             utils.vis_keypoints(transformed['image'], transformed['keypoints'])
 
         return {

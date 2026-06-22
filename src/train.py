@@ -52,7 +52,8 @@ if not os.path.exists(f"{args.models_output}"):
     os.makedirs(f"{args.models_output}", exist_ok=True)
 
 # model
-model = snowPoleResNet50(pretrained=True, requires_grad=True).to(args.device)
+num_keypoints = 4 * args.number_of_poles
+model = snowPoleResNet50(pretrained=True, requires_grad=True, num_keypoints=num_keypoints).to(args.device)
 
 #NOTE: No longer using CO_and_WA_model.pth
 #Commented out because we want train.py to build a model from ground up (without using an existing checkpoint)
@@ -137,7 +138,7 @@ val_loss = []
 #######################
 best_loss_val = np.inf
 best_loss_val_epoch = 0 
-best_model = model
+best_model_weights = copy.deepcopy(model.state_dict())
 #######################
 for epoch in range(args.epochs):
 
@@ -168,9 +169,10 @@ for epoch in range(args.epochs):
     if val_epoch_loss < best_loss_val:
                 best_loss_val = val_epoch_loss
                 best_loss_val_epoch = epoch
-                best_model = epoch
-    elif epoch > best_loss_val_epoch + 10:
-            epoch = best_model ### save model at lowest val error, rather than 10 epochs later 
+                best_model_weights = copy.deepcopy(model.state_dict())
+    elif epoch > best_loss_val_epoch + 25: #TODO Determine best number to put here
+            ### save model at lowest val error, rather than 10 epochs later 
+            model.load_state_dict(best_model_weights)
             break
 
 # loss plots
