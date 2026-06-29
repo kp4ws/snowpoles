@@ -59,7 +59,7 @@ def predict(model, data, eval='eval'):
         for i, data in tqdm(enumerate(data)): 
             image, keypoints = data['image'].to(args.device), data['keypoints'].to(args.device)
             filename = data['filename']
-            camera = filename.split('_W')[0]
+            camera = filename.split('_')[0]
             #Camera = "_".join(filename.split("_")[:2])
 
             current_row_idx = len(evaluation_data["filename"])
@@ -76,11 +76,6 @@ def predict(model, data, eval='eval'):
             # flatten the keypoints
             keypoints = keypoints.detach().cpu().numpy().reshape(-1,2)
 
-            #TODO: determine if this is needed
-            # FIX: Project ground-truth points back to original image space dimensions
-            # so they match your pixel error calculation domain exactly
-            # keypoints_orig_space = keypoints * [w / 224, h / 224]
-
             utils.eval_keypoints_plot(args, filename, image, outputs, eval, orig_keypoints=keypoints) ## visualize points
             
             for j in range(args.number_of_poles):
@@ -96,28 +91,32 @@ def predict(model, data, eval='eval'):
                 x2_pred = pred_keypoint[4*j + 2]
                 y2_pred = pred_keypoint[4*j + 3]
                 
-                ## outputs proj and in cm
-                total_length_pixel = distance.euclidean([x1_pred, y1_pred], [x2_pred, y2_pred])
-                
+                ## 224 canvas pixel distances
+                total_length_pixel_224 = distance.euclidean([x1_pred, y1_pred], [x2_pred, y2_pred])
+                total_length_pixel_actual_224 = distance.euclidean([x1_true, y1_true], [x2_true, y2_true])
+
                 try:
                     camera_row = metadata[metadata['camera_id'] == camera].iloc[0]
                     full_length_pole_cm = float(camera_row[f"s{poleId}_pole_length_cm"])
                     pixel_cm_conversion = float(camera_row[f"s{poleId}_pixel_cm_conversion"])
-                    automated_sd = full_length_pole_cm - (pixel_cm_conversion * total_length_pixel)
 
                     img_row = labels[labels['filename'] == filename]
                     manual_pixel_length = img_row[f's{poleId}_pixel_length'].values[0]
-                    manual_snowdepth = full_length_pole_cm - (pixel_cm_conversion * manual_pixel_length)
+                    manual_snowdepth = img_row[f's{poleId}_snow_depth'].values[0] #full_length_pole_cm - (pixel_cm_conversion * manual_pixel_length)
+                    
+                    #We scale 224 predicted pixel length up to match full resolution (which our px to cm conversions are based on)
+                    scale_ratio = manual_pixel_length / total_length_pixel_actual_224
+                    total_length_pixel_full_res = total_length_pixel_224 * scale_ratio
+
+                    automated_sd = full_length_pole_cm - (pixel_cm_conversion * total_length_pixel_full_res)
                     difference = manual_snowdepth - automated_sd
 
                     ## error
                     top_pixel_error = distance.euclidean([x1_true, y1_true], [x1_pred, y1_pred])
                     bottom_pixel_error = distance.euclidean([x2_true, y2_true], [x2_pred, y2_pred])
-                    total_length_pixel = distance.euclidean([x1_pred, y1_pred],[x2_pred, y2_pred])
-                    total_length_pixel_actual = distance.euclidean([x1_true, y1_true],[x2_true, y2_true])
 
                     # MAPE
-                    mape_error = utils.MAPE(total_length_pixel_actual, total_length_pixel)
+                    mape_error = utils.MAPE(total_length_pixel_actual_224, total_length_pixel_224)
                     mape_error_sd = utils.MAPE(manual_snowdepth, automated_sd)
 
                 except Exception as e:
@@ -127,6 +126,7 @@ def predict(model, data, eval='eval'):
                     manual_pixel_length, manual_snowdepth, difference = 0, 0, 0
                     top_pixel_error, bottom_pixel_error = 0, 0
                     mape_error, mape_error_sd = 0, 0
+                    automated_sd = 0
 
                 #Append flat dynamic row into evaluation data
                 for key, val in [
@@ -140,7 +140,7 @@ def predict(model, data, eval='eval'):
                     (f"s{poleId}_x2_pred", x2_pred),
                     (f"s{poleId}_y2_pred", y2_pred),
 
-                    (f"s{poleId}_total_length_pixel", total_length_pixel),
+                    (f"s{poleId}_total_length_pixel", total_length_pixel_224),
                     (f"s{poleId}_full_length_pole_cm", full_length_pole_cm),
                     (f"s{poleId}_pixel_cm_conversion", pixel_cm_conversion),
                     

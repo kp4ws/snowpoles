@@ -57,7 +57,7 @@ class ArgumentParser():
         if not self.args.no_confirm:
             print("\n\n# The following options were specified in config.toml or as arguments:\n")
 
-            #Can be added as condition to print only relevant fields
+            #NOTE: Add this as condition to print only relevant fields
             def is_relevant(field_name):
                 return self.job_fields is None or field_name in self.job_fields
             
@@ -87,7 +87,7 @@ class ArgumentParser():
                 print(f"Images to label:\nEvery {self.args.subset_to_label} images")
             
             if(is_relevant("train")):
-                print("LR:\n" + str(self.args.lr) + "\n")
+                print("Learning Rate:\n" + str(self.args.lr) + "\n")
                 print("Epochs:\n" + str(self.args.epochs) + "\n")
 
             confirmation = str(input("\nIs this OK? (y/n) "))

@@ -80,9 +80,8 @@ def eval_keypoints_plot(args, file, image, outputs, eval, orig_keypoints):
     output_keypoint = output_keypoint.reshape(-1, 2)
     orig_keypoints = orig_keypoints.reshape(-1, 2)
     for p in range(output_keypoint.shape[0]):
-        if p == 0: 
-            plt.plot(orig_keypoints[p, 0], orig_keypoints[p, 1], 'b.',  markersize=20)
-            plt.plot(output_keypoint[p, 0], output_keypoint[p, 1], 'r.', markersize=20)
+        plt.plot(orig_keypoints[p, 0], orig_keypoints[p, 1], 'b.',  markersize=20)
+        plt.plot(output_keypoint[p, 0], output_keypoint[p, 1], 'r.', markersize=20)
     plt.savefig(f"{args.models_output}/{eval}/{eval}_{file}.png")
     plt.close()
 
