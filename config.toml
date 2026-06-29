@@ -3,16 +3,15 @@
 
 [paths]
 input_images = 'CHRL_data'
-images_output = '' #TODO
-trainee_model = 'models/CO_and_WA_model.pth'
-models_output = 'models/output'
 labels = 'CHRL_data/labels.csv'
 pole_metadata = 'CHRL_data/pole_metadata.csv'
+trainee_model = '' #TODO
+images_output = 'C:\Users\pawsonk\Coastal Hydrology\output\images'
+models_output = 'C:\Users\pawsonk\Coastal Hydrology\output\models'
 
 [labeling]
-number_of_poles = 3 #TODO: Refactor code so it works for any amount of poles specified here
-#pole_length = 104 # Length of poles -> Commented out because these vary in our implementation
-subset_to_label = 10 # Label every N images
+subset_to_label = 100 # Label every N images
+number_of_poles = 3
 
 [training]
 lr = 0.001 # Learning Rate 

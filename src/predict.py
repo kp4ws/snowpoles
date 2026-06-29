@@ -96,6 +96,8 @@ def predict(model, args, device):
             creationTime = os.path.getmtime(file)
             dt_c = datetime.datetime.fromtimestamp(creationTime)
             formatted_datetime = dt_c.strftime("%m/%d/%Y %H:%M")
+            
+            current_row_idx = len(predictions_data["camera_id"])
 
             predictions_data["camera_id"].append(camera)
             predictions_data["filename"].append(filename)
@@ -143,9 +145,9 @@ def predict(model, args, device):
                 
                 try:
                     ## snow depth conversion ## 
-                    camera_meta = metadata[metadata['camera_id'] == camera]
-                    full_length_pole_cm = camera_meta['pole_length_cm'].values[j]
-                    pixel_cm_conversion = camera_meta['pixel_cm_conversion'].values[j]
+                    camera_row = metadata[metadata['camera_id'] == camera].iloc[0]
+                    full_length_pole_cm = float(camera_row[f"s{poleId}_pole_length_cm"])
+                    pixel_cm_conversion = float(camera_row[f"s{poleId}_pixel_cm_conversion"])
                     snow_depth = full_length_pole_cm - (pixel_cm_conversion * total_length_pixel)
                 except Exception:
                     # Fallback default values if metadata lookup or lookup row fails
@@ -160,7 +162,7 @@ def predict(model, args, device):
                     (f"s{poleId}_snow_depth", snow_depth),
                 ]:
                     if key not in predictions_data:
-                        predictions_data[key] = [None] * i
+                        predictions_data[key] = [None] * current_row_idx
                     predictions_data[key].append(val)
 
             if i % 100 == 0: 

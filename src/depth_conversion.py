@@ -25,7 +25,7 @@ from arg_parser import ArgumentParser
 def main():
     args = ArgumentParser("Convert pixel lengths into snow depth")
 
-    predictions = pd.read_csv(f'{args.output}/results.csv')
+    predictions = pd.read_csv(f'{args.models_output}/predictions/results.csv')
     metadata = pd.read_csv(f"{args.path}/pole_metadata.csv")
 
     depth_data = {
@@ -37,6 +37,8 @@ def main():
         try: 
             camera = Path(filename).name.split("_")[0]
             
+            current_idx = len(depth_data['filename'])
+
             depth_data["camera_id"].append(camera)
             depth_data["filename"].append(filename)
 
@@ -46,8 +48,8 @@ def main():
             for j in range(args.number_of_poles):
                 poleId = j+1
 
-                full_length_pole_cm = camera_meta['pole_length_cm'].values[j]
-                pixel_cm_conversion = camera_meta['pixel_cm_conversion'].values[j]
+                full_length_pole_cm = camera_meta[f's{poleId}_pole_length_cm'].values[0]
+                pixel_cm_conversion = camera_meta[f's{poleId}_pixel_cm_conversion'].values[0]
 
                 ## need to scale back up 
                 x1 = img_row[f's{poleId}_x1_pred'].values[0] 
@@ -65,7 +67,7 @@ def main():
                 ]:
                     if key not in depth_data:
                         # Pad with None for any previously processed images
-                        depth_data[key] = [None] * i
+                        depth_data[key] = [None] * current_idx
                     depth_data[key].append(val)
 
         except Exception as e:
@@ -73,11 +75,10 @@ def main():
             print(f"Skipping image {filename} due to processing error: {e}")
             pass
 
-
     df = pd.DataFrame(depth_data)
-    df.to_csv(f'{args.output}/results_wsnowdepthcm.csv', index=False)
+    df.to_csv(f'{args.models_output}/predictions/results_wsnowdepthcm.csv', index=False)
 
-    print(f'saved at {args.output}/results_wsnowdepthcm.csv')
+    print(f'saved at {args.models_output}/predictions/results_wsnowdepthcm.csv')
 
 if __name__ == '__main__':
     main()

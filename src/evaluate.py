@@ -62,6 +62,8 @@ def predict(model, data, eval='eval'):
             camera = filename.split('_W')[0]
             #Camera = "_".join(filename.split("_")[:2])
 
+            current_row_idx = len(evaluation_data["filename"])
+            
             evaluation_data["camera"].append(camera)
             evaluation_data['filename'].append(filename)
 
@@ -73,6 +75,12 @@ def predict(model, data, eval='eval'):
 
             # flatten the keypoints
             keypoints = keypoints.detach().cpu().numpy().reshape(-1,2)
+
+            #TODO: determine if this is needed
+            # FIX: Project ground-truth points back to original image space dimensions
+            # so they match your pixel error calculation domain exactly
+            # keypoints_orig_space = keypoints * [w / 224, h / 224]
+
             utils.eval_keypoints_plot(args, filename, image, outputs, eval, orig_keypoints=keypoints) ## visualize points
             
             for j in range(args.number_of_poles):
@@ -92,9 +100,9 @@ def predict(model, data, eval='eval'):
                 total_length_pixel = distance.euclidean([x1_pred, y1_pred], [x2_pred, y2_pred])
                 
                 try:
-                    camera_meta = metadata[metadata['camera_id'] == camera]
-                    full_length_pole_cm = camera_meta['pole_length_cm'].values[j] #TODO if metadata format changes to 1 line per row, this needs updating
-                    pixel_cm_conversion = camera_meta['pixel_cm_conversion'].values[j]
+                    camera_row = metadata[metadata['camera_id'] == camera].iloc[0]
+                    full_length_pole_cm = float(camera_row[f"s{poleId}_pole_length_cm"])
+                    pixel_cm_conversion = float(camera_row[f"s{poleId}_pixel_cm_conversion"])
                     automated_sd = full_length_pole_cm - (pixel_cm_conversion * total_length_pixel)
 
                     img_row = labels[labels['filename'] == filename]
@@ -147,7 +155,7 @@ def predict(model, data, eval='eval'):
                     (f"s{poleId}_mape_sd", mape_error_sd),
                 ]:
                     if key not in evaluation_data:
-                        evaluation_data[key] = [None] * i
+                        evaluation_data[key] = [None] * current_row_idx
                     evaluation_data[key].append(val)
     
     results = pd.DataFrame(evaluation_data)
