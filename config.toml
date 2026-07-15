@@ -42,53 +42,64 @@ show_dataset_plot = false # Show dataset plot
 total_poles = 3
 active_poles = [1, 2, 3]
 upside_down = false
+enabled = false
 
 [cameras.CC2]
 total_poles = 3
 active_poles = [1, 2, 3]
 upside_down = true
+enabled = false
 
 [cameras.CTRL1]
 total_poles = 3
 active_poles = [1, 2, 3]
 upside_down = false
+enabled = true
 
 [cameras.CTRL2]
 total_poles = 3
 active_poles = [1, 2, 3]
 upside_down = true
+enabled = false
 
 [cameras.S5-CAM-F1A]
 total_poles = 3
 active_poles = [1, 2, 3]
 upside_down = false
+enabled = false
 
 [cameras.S5-CAM-F1B]
 total_poles = 3
 active_poles = [1, 2, 3]
 upside_down = false
+enabled = false
 
 [cameras.S5-CAM-F2A]
 total_poles = 3
 active_poles = [1, 2, 3]
 upside_down = false
+enabled = false
 
 [cameras.S5-CAM-F2B]
 total_poles = 3
 active_poles = [1, 2, 3]
 upside_down = false
+enabled = false
 
 [cameras.S5-CAM-F3]
 total_poles = 5
 active_poles = [1, 2, 3, 4, 5]
 upside_down = false
+enabled = false
 
 [cameras.S5-F-WX]
 total_poles = 2
 active_poles = [1, 2]
 upside_down = false
+enabled = false
 
 [cameras.S6-F-WX]
 total_poles = 5
 active_poles = [1, 2, 3, 4, 5]
 upside_down = false
+enabled = false

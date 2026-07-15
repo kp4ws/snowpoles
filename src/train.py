@@ -28,9 +28,7 @@ import matplotlib
 import utils
 from model import snowPoleResNet50
 from tqdm import tqdm
-import IPython
 import numpy as np
-from pathlib import Path
 from dataset import train_data, train_loader, validation_data, validation_loader
 # training viz 
 from torch.utils.tensorboard import SummaryWriter  # For PyTorch

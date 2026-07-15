@@ -24,7 +24,6 @@ import datetime
 
 # for predict
 import cv2
-import glob
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -32,9 +31,6 @@ from scipy.spatial import distance
 import torch
 from tqdm import tqdm
 # Import all libraries
-import albumentations
-import IPython
-import utils
 from model import snowPoleResNet50
 import torch
 

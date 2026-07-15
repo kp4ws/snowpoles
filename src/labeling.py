@@ -25,17 +25,12 @@ python src/labeling.py --datapath "/Users/cmbreen/Documents/FDLTCC/summer_2025/F
 
 import cv2
 import matplotlib.pyplot as plt
-import glob
-import argparse
-import tqdm
 import math
 import pandas as pd
 import os
 import datetime
 import numpy as np
 from pathlib import Path
-import tomli as tomllib
-import IPython
 
 from utils import enable_scroll_zoom_and_pan
 from arg_parser import ArgumentParser

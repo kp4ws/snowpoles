@@ -11,7 +11,6 @@ Water Resources Research, 60(7), e2023WR036682. https://doi.org/10.1029/2023WR03
 
 
 '''
-import colorsys
 import torch
 import cv2
 import pandas as pd
@@ -19,15 +18,8 @@ import numpy as np
 import tomli as tomllib
 import utils
 from torch.utils.data import Dataset, DataLoader
-import IPython
-import matplotlib.pyplot as plt
-import glob
 import torch
-import torchvision.transforms as T
-from PIL import Image
-from PIL import Image, ImageFile
 import albumentations as A ### better for keypoint augmentations, pip install albumentations
-from torchvision.transforms import Compose, Resize, ToTensor
 from sklearn.model_selection import train_test_split
 import os
 from pathlib import Path

@@ -1,6 +1,6 @@
 import argparse
-import tomli as tomllib
 import os
+from config import paths, labeling, training
 
 # Argument parser
 class ArgumentParser():
@@ -21,7 +21,6 @@ class ArgumentParser():
         # self.parser.add_argument("--datapath", help="(deprecated) directory where images are located")
         self.parser.add_argument("--path", help="directory where images are located")
         self.parser.add_argument("--subset_to_label", help="label every N images")
-        self.parser.add_argument("--number_of_poles", help="number of snow poles each camera has")
         self.parser.add_argument("--device", required=False, help='device to use for processing ("cpu" or "cuda")')
         self.parser.add_argument("--models_output", required=False, help="directory in which to store models output")
         self.parser.add_argument("--images_output", required=False, help="directory in which to store images output")
@@ -31,34 +30,30 @@ class ArgumentParser():
 
 
     def _get_arguments(self):
-        # Get arguments from config file if they weren't specified  
-        with open("config.toml", "rb") as configfile:
-            config = tomllib.load(configfile)
-            if not self.args.model_path:
-                config_pretrained = config["paths"].get("pretrained_model", "").strip()
+        # Get arguments from config if they weren't specified
+        if not self.args.model_path:
+            config_pretrained = paths.get("pretrained_model", "").strip()
 
-                if config_pretrained:
-                    self.args.model_path = config_pretrained
-                else:
-                    models_output_dir = config["paths"].get("models_output", "output/models")
-                    self.args.model_path = os.path.normpath(os.path.join(models_output_dir, "model.pth"))
+            if config_pretrained:
+                self.args.model_path = config_pretrained
+            else:
+                models_output_dir = paths.get("models_output", "output/models")
+                self.args.model_path = os.path.normpath(os.path.join(models_output_dir, "model.pth"))
 
-            if not self.args.path:
-                self.args.path = config["paths"]["input_images"]
-            if not self.args.device:
-                self.args.device = config["training"]["device"]
-            if not self.args.subset_to_label:
-                self.args.subset_to_label = config["labeling"]["subset_to_label"]
-            if not self.args.number_of_poles:
-                self.args.number_of_poles = config["labeling"]["number_of_poles"]
-            if not self.args.models_output:
-                self.args.models_output = config["paths"]["models_output"]
-            if not self.args.images_output:
-                self.args.images_output = config["paths"]["images_output"]
-            if not self.args.epochs:
-                self.args.epochs = config["training"]["epochs"]
-            if not self.args.lr:
-                self.args.lr = config["training"]["lr"]
+        if not self.args.path:
+            self.args.path = paths.get("input_images")
+        if not self.args.device:
+            self.args.device = training.get("device", "cpu")
+        if not self.args.subset_to_label:
+            self.args.subset_to_label = labeling.get("subset_to_label")
+        if not self.args.models_output:
+            self.args.models_output = paths.get("models_output")
+        if not self.args.images_output:
+            self.args.images_output = paths.get("images_output")
+        if not self.args.epochs:
+            self.args.epochs = training.get("epochs")
+        if not self.args.lr:
+            self.args.lr = training.get("lr")
 
     def _confirm_arguments(self):
         if not self.args.no_confirm:

@@ -11,20 +11,16 @@ python src/evaluate.py
 '''
 
 # Import startup libraries
-import argparse
-import tomli as tomllib
 import os
 import torch
 import numpy as np
 from model import snowPoleResNet50
-import IPython
 import utils
 import pandas as pd
 from dataset import train_data, validation_data
 from tqdm import tqdm
 from scipy.spatial import distance
 import os
-import matplotlib.pyplot as plt
 from arg_parser import ArgumentParser
 
 # Argument parser

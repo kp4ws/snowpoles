@@ -2,7 +2,6 @@ from pathlib import Path
 from datetime import datetime
 from PIL import Image
 from PIL.ExifTags import TAGS
-import os
 import shutil
 
 def get_image_datetime_exif(image_path, exif_field="DateTime") -> datetime:

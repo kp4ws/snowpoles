@@ -10,14 +10,9 @@ example command line to run:
 python src/depth_conversion.py --predictions_path '/predictions/results.csv' --metadata 'example_nontrained_data/pole_metadata.csv'
 
 '''
-import numpy as np
-import tomli as tomllib
-import os
-import argparse
 import pandas as pd
 from tqdm import tqdm
 from scipy.spatial import distance
-import IPython
 from pathlib import Path
 
 from arg_parser import ArgumentParser

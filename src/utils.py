@@ -1,9 +1,6 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import cv2 
-import math
-import pandas as pd
-from arg_parser import ArgumentParser
 
 def valid_keypoints_plot(args, image, outputs, orig_keypoints, epoch):
     """
