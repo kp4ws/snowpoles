@@ -61,7 +61,9 @@ class ArgumentParser():
 
             #NOTE: Add this as condition to print only relevant fields
             def is_relevant(field_name):
-                return self.job_fields is None or field_name in self.job_fields
+                if not self.job_fields:
+                    return False
+                return field_name in self.job_fields
             
             if(self.args.model_path.startswith("/")):
                 print(f'Model to use:\n{self.args.model_path}\n')
@@ -86,16 +88,17 @@ class ArgumentParser():
                 print(f"Directory where images output will be stored:\n{os.getcwd()}/{self.args.images_output}\n")
 
             if(is_relevant("label")):
-                print(f"Images to label:\nEvery {self.args.subset_to_label} images")
+                print(f"Images to label:\nEvery {self.args.subset_to_label} images\n")
             
             if(is_relevant("train")):
                 print("Learning Rate:\n" + str(self.args.lr) + "\n")
                 print("Epochs:\n" + str(self.args.epochs) + "\n")
 
-            confirmation = str(input("\nIs this OK? (y/n) "))
-            if confirmation.lower() != "y":
-                if confirmation.lower() == "n":
-                    print(f"Edit the config file, located at {os.getcwd()}/config.toml, to your liking, or edit the command line arguments if they were specified, and then re-run this file.\n")
-                else:
-                    print("Invalid input.\n")
-                quit()
+            if(is_relevant("label") or is_relevant("train")):
+                confirmation = str(input("\nIs this OK? (y/n) "))
+                if confirmation.lower() != "y":
+                    if confirmation.lower() == "n":
+                        print(f"Edit the config file, located at {os.getcwd()}/config.toml, to your liking, or edit the command line arguments if they were specified, and then re-run this file.\n")
+                    else:
+                        print("Invalid input.\n")
+                    quit()
