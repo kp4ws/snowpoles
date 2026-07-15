@@ -17,7 +17,7 @@ class ArgumentParser():
         return getattr(self.args, name)
 
     def _add_arguments(self):
-        self.parser.add_argument("--model", required=False, help="model to use")
+        self.parser.add_argument("--model_path", required=False, help="model to use")
         # self.parser.add_argument("--datapath", help="(deprecated) directory where images are located")
         self.parser.add_argument("--path", help="directory where images are located")
         self.parser.add_argument("--subset_to_label", help="label every N images")
@@ -34,8 +34,15 @@ class ArgumentParser():
         # Get arguments from config file if they weren't specified  
         with open("config.toml", "rb") as configfile:
             config = tomllib.load(configfile)
-            if not self.args.model:
-                self.args.model = config["paths"]["trainee_model"]
+            if not self.args.model_path:
+                config_pretrained = config["paths"].get("pretrained_model", "").strip()
+
+                if config_pretrained:
+                    self.args.model_path = config_pretrained
+                else:
+                    models_output_dir = config["paths"].get("models_output", "output/models")
+                    self.args.model_path = os.path.normpath(os.path.join(models_output_dir, "model.pth"))
+
             if not self.args.path:
                 self.args.path = config["paths"]["input_images"]
             if not self.args.device:
@@ -61,8 +68,8 @@ class ArgumentParser():
             def is_relevant(field_name):
                 return self.job_fields is None or field_name in self.job_fields
             
-            if(self.args.model.startswith("/")):
-                print(f'Model to use:\n{self.args.model}\n')
+            if(self.args.model_path.startswith("/")):
+                print(f'Model to use:\n{self.args.model_path}\n')
             else:
                 print(f"Model to use:\n{os.getcwd()}\n")
             

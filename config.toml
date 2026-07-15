@@ -1,25 +1,94 @@
+# ====================================
+# PATHS Configuration
 # All paths are relative to the root of the repository. Use forward slashes as separators, they will work on Windows as well.
 # Traversing up is supported. Use ".." in the path to go up a directory.
-
+# ====================================
 [paths]
 input_images = 'CHRL_data'
 labels = 'CHRL_data/labels.csv'
 pole_metadata = 'CHRL_data/pole_metadata.csv'
-trainee_model = '' #TODO
-images_output = 'C:\Users\pawsonk\Coastal Hydrology\output\images'
+
+# Model paths
+pretrained_model = "" # Alternative path to model if it doesn't exist within models_output directory
 models_output = 'C:\Users\pawsonk\Coastal Hydrology\output\models'
+images_output = 'C:\Users\pawsonk\Coastal Hydrology\output\images'
 
+# ====================================
+# LABELING Configuration
+# ====================================
 [labeling]
-subset_to_label = 100 # Label every N images
-number_of_poles = 3
+subset_to_label = 100 # Label every Nth image
 
+# ====================================
+# TRAINING Configuration
+# ====================================
 [training]
 lr = 0.001 # Learning Rate 
 epochs = 200 # Epochs
+batch_size = 8 # Batch size
 aug = false # whether to augment the data or not
 
+#Hardware execution
 device = "cpu" # Device to use, either "cuda" or "cpu".
 
-batch_size = 8 # Batch size
-show_dataset_plot = false # Show dataset plot
+#Debugging/Visualization
 filter = false
+show_dataset_plot = false # Show dataset plot
+
+# ====================================
+# CAMERAS & STAKES Configuration
+# ====================================
+[cameras.CC1]
+total_poles = 3
+active_poles = [1, 2, 3]
+upside_down = false
+
+[cameras.CC2]
+total_poles = 3
+active_poles = [1, 2, 3]
+upside_down = true
+
+[cameras.CTRL1]
+total_poles = 3
+active_poles = [1, 2, 3]
+upside_down = false
+
+[cameras.CTRL2]
+total_poles = 3
+active_poles = [1, 2, 3]
+upside_down = true
+
+[cameras.S5-CAM-F1A]
+total_poles = 3
+active_poles = [1, 2, 3]
+upside_down = false
+
+[cameras.S5-CAM-F1B]
+total_poles = 3
+active_poles = [1, 2, 3]
+upside_down = false
+
+[cameras.S5-CAM-F2A]
+total_poles = 3
+active_poles = [1, 2, 3]
+upside_down = false
+
+[cameras.S5-CAM-F2B]
+total_poles = 3
+active_poles = [1, 2, 3]
+upside_down = false
+
+[cameras.S5-CAM-F3]
+total_poles = 5
+active_poles = [1, 2, 3, 4, 5]
+upside_down = false
+
+[cameras.S5-F-WX]
+total_poles = 2
+active_poles = [1, 2]
+upside_down = false
+
+[cameras.S6-F-WX]
+total_poles = 5
+active_poles = [1, 2, 3, 4, 5]
+upside_down = false

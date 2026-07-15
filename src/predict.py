@@ -58,7 +58,7 @@ def load_model(args):
     model = snowPoleResNet50(pretrained=False, requires_grad=False).to(args.device)
     # load the model checkpoint
     #torch.serialization.add_safe_globals([torch.nn.modules.loss.SmoothL1Loss])
-    model_path = f"{args.models_output}/model.pth"
+    model_path = args.model_path
     checkpoint = torch.load(model_path, map_location=torch.device(args.device), weights_only=False)
     model.load_state_dict(checkpoint['model_state_dict'])
     model.eval()

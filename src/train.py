@@ -57,7 +57,7 @@ model = snowPoleResNet50(pretrained=True, requires_grad=True, num_keypoints=num_
 
 #NOTE: No longer using CO_and_WA_model.pth
 #Commented out because we want train.py to build a model from ground up (without using an existing checkpoint)
-# checkpoint = torch.load(args.model, map_location=torch.device(args.device), weights_only=False)
+# checkpoint = torch.load(args.model_path, map_location=torch.device(args.device), weights_only=False)
 # model.load_state_dict(checkpoint["model_state_dict"])
 
 # print("fine-tuned model loaded...")

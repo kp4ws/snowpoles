@@ -33,9 +33,9 @@ args = ArgumentParser("Evaluate model on the train/val images")
 def load_model():
     model = snowPoleResNet50(pretrained=False, requires_grad=False).to(args.device)
     # load the model checkpoint
-    model_path = f"{args.models_output}/model.pth"
+    model_path = args.model_path
     checkpoint = torch.load(model_path, map_location=torch.device(args.device), weights_only=False)
-    print(f"loading model from the following path: {args.models_output}")
+    print(f"loading model from the following path: {args.model_path}")
     # load model weights state_dict
     model.load_state_dict(checkpoint['model_state_dict'])
     model.eval()
