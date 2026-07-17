@@ -5,8 +5,6 @@ def process_stake_measurements(path, file):
 
     #Preprocess data to get clean dataset
     clean_df = measurements_df[
-        #comment out this line if you want all sites (or change to specific site name)
-        # (measurements_df["site"] == "CTRL1") & 
         (measurements_df["axis"] == "slant") &
         (measurements_df["point1"] == "ground") &
         (measurements_df["point2"] == "top")
