@@ -17,7 +17,8 @@ images_output = 'C:\Users\pawsonk\Coastal Hydrology\output\images'
 # LABELING Configuration
 # ====================================
 [labeling]
-subset_to_label = 100 # Label every Nth image
+#Higher target count has better accuracy but takes longer to label
+target_label_count = 25 # The total amount of images to label per site
 
 # ====================================
 # TRAINING Configuration
@@ -76,19 +77,19 @@ enabled = false
 
 [cameras.S5-CAM-F2A]
 total_poles = 3
-active_poles = [1, 2, 3]
+active_poles = [1, 3] # pole 2 doesn't have "slant" axis measurements, so set unactive
 upside_down = false
 enabled = false
 
 [cameras.S5-CAM-F2B]
 total_poles = 3
-active_poles = [1, 2, 3]
+active_poles = [3] # pole 1 and 2 don't have slant axis measurements, so set inactive
 upside_down = false
 enabled = false
 
 [cameras.S5-CAM-F3]
 total_poles = 5
-active_poles = [1, 2, 3, 4, 5]
+active_poles = [1, 3, 4, 5] # pole 2 not in slant axis measurements, set inactive
 upside_down = false
 enabled = false
 

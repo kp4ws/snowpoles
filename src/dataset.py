@@ -23,7 +23,7 @@ import albumentations as A ### better for keypoint augmentations, pip install al
 from sklearn.model_selection import train_test_split
 import os
 from pathlib import Path
-
+from config import cameras
 
 # Load config from config.toml
 with open("config.toml", "rb") as configfile:
@@ -136,6 +136,10 @@ class snowPoleDataset(Dataset):
         filename = row['filename']
         cameraID = row['camera_id']
 
+        #TODO: Should we throw error here if camera cfg doesn't exist?
+        camera_cfg = cameras.get(cameraID)
+        active_poles = camera_cfg.get("active_poles", [])
+
         #Read and prepare image
         image = cv2.imread(parents[self.data.iloc[index]["filename"]])
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
@@ -153,10 +157,8 @@ class snowPoleDataset(Dataset):
                 cv2.imwrite(f"{config['paths']['models_output']}/filtered_{filename}", image)
 
         #The columns that correspond to the keypoints in our dataframe
-        number_of_poles = config["training"].get("number_of_poles", 3)
         keypoint_columns = []
-        for p in range(number_of_poles):
-            poleId = p+1
+        for poleId in active_poles:
             keypoint_columns.extend([
                 f's{poleId}_x1', f's{poleId}_y1', 
                 f's{poleId}_x2', f's{poleId}_y2'
@@ -180,7 +182,7 @@ class snowPoleDataset(Dataset):
         #utils.vis_keypoints(transformed['image'], transformed['keypoints'])
         image = np.transpose(img_transformed, (2, 0, 1))
 
-        expected_points = 2 * number_of_poles
+        expected_points = 2 * len(active_poles)
         if len(keypoints) != expected_points:
             utils.vis_keypoints(transformed['image'], transformed['keypoints'])
 

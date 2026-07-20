@@ -20,7 +20,7 @@ class ArgumentParser():
         self.parser.add_argument("--model_path", required=False, help="model to use")
         # self.parser.add_argument("--datapath", help="(deprecated) directory where images are located")
         self.parser.add_argument("--path", help="directory where images are located")
-        self.parser.add_argument("--subset_to_label", help="label every N images")
+        self.parser.add_argument("--target_label_count", help="label N images")
         self.parser.add_argument("--device", required=False, help='device to use for processing ("cpu" or "cuda")')
         self.parser.add_argument("--models_output", required=False, help="directory in which to store models output")
         self.parser.add_argument("--images_output", required=False, help="directory in which to store images output")
@@ -44,8 +44,8 @@ class ArgumentParser():
             self.args.path = paths.get("input_images")
         if not self.args.device:
             self.args.device = training.get("device", "cpu")
-        if not self.args.subset_to_label:
-            self.args.subset_to_label = labeling.get("subset_to_label")
+        if not self.args.target_label_count:
+            self.args.target_label_count = labeling.get("target_label_count")
         if not self.args.models_output:
             self.args.models_output = paths.get("models_output")
         if not self.args.images_output:
@@ -88,7 +88,7 @@ class ArgumentParser():
                 print(f"Directory where images output will be stored:\n{os.getcwd()}/{self.args.images_output}\n")
 
             if(is_relevant("label")):
-                print(f"Images to label:\nEvery {self.args.subset_to_label} images\n")
+                print(f"Images to label:\n{self.args.target_label_count} images\n")
             
             if(is_relevant("train")):
                 print("Learning Rate:\n" + str(self.args.lr) + "\n")

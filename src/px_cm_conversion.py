@@ -54,7 +54,7 @@ def main():
             continue
 
         #Get baseline image for current camera site
-        baseline_file = cam_dir / "00_baseline.jpg"
+        baseline_file = cam_dir / "zz_baseline.jpg"
         if not baseline_file.exists():
             print(f"Baseline image missing for {camera_id}. Please run baseline script first.")
             sys.exit(0)
@@ -87,12 +87,11 @@ def main():
             ma="left"
             )
         points = plt.ginput(expected_clicks, timeout=0, mouse_pop=2)
+        plt.close()
 
         if len(points) < expected_clicks:
             print(f"Skipping {camera_id} (Not enough points collected / User skipped)")
             continue
-
-        plt.close()
 
         current_row = {
             "camera_id": camera_id,

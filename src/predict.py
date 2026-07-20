@@ -33,6 +33,7 @@ from tqdm import tqdm
 # Import all libraries
 from model import snowPoleResNet50
 import torch
+from config import cameras
 
 from arg_parser import ArgumentParser
 
@@ -80,13 +81,9 @@ def predict(model, args, device):
         for i, file in tqdm(enumerate(snowpolefiles)): 
             file_path = Path(file)
             filename = file_path.name
-            camera = file_path.stem.split('_')[0]
-            #filename = file.split('/')[-1]
-            #Camera = filename.split('/')[-1] ## assumes in a folder with camera name ('cam1', 'cam2', etc)
-
-            #TODO: Filter only for CTRL1 camera for now
-            if(camera != 'CTRL1'):
-                continue
+            camera_id = file_path.stem.split('_')[0]
+            camera_cfg = cameras.get(camera_id)
+            active_poles = camera_cfg.get("active_poles", [])
 
             image = cv2.imread(str(file))
             creationTime = os.path.getmtime(file)
@@ -95,7 +92,7 @@ def predict(model, args, device):
             
             current_row_idx = len(predictions_data["camera_id"])
 
-            predictions_data["camera_id"].append(camera)
+            predictions_data["camera_id"].append(camera_id)
             predictions_data["filename"].append(filename)
             predictions_data['datetime'].append(formatted_datetime)
 
@@ -123,8 +120,7 @@ def predict(model, args, device):
             ## resize back up to original size and project predicted points onto original size
             image = cv2.resize(image, (w, h))
             
-            for j in range(args.number_of_poles):
-                poleId = j+1
+            for j, poleId in enumerate(active_poles):
                 base = 4*j
 
                 x1_pred = pred_keypoint[base + 0] * (w / 224)
@@ -141,7 +137,7 @@ def predict(model, args, device):
                 
                 try:
                     ## snow depth conversion ## 
-                    camera_row = metadata[metadata['camera_id'] == camera].iloc[0]
+                    camera_row = metadata[metadata['camera_id'] == camera_id].iloc[0]
                     full_length_pole_cm = float(camera_row[f"s{poleId}_pole_length_cm"])
                     pixel_cm_conversion = float(camera_row[f"s{poleId}_pixel_cm_conversion"])
                     snow_depth = full_length_pole_cm - (pixel_cm_conversion * total_length_pixel)

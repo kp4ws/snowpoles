@@ -33,6 +33,8 @@ from dataset import train_data, train_loader, validation_data, validation_loader
 # training viz 
 from torch.utils.tensorboard import SummaryWriter  # For PyTorch
 import copy
+from pathlib import Path
+import pandas as pd
 
 from arg_parser import ArgumentParser
 
@@ -49,8 +51,15 @@ writer = SummaryWriter(f'runs/CHRL_2026')
 if not os.path.exists(f"{args.models_output}"):
     os.makedirs(f"{args.models_output}", exist_ok=True)
 
+labels_path = Path(args.path) / "labels.csv"
+df_labels = pd.read_csv(labels_path)
+
+#Determine how many active poles we have, based on how many _x1 columns are present in labels.csv
+pole_x1_cols = [col for col in df_labels.columns if col.endswith("_x1")]
+num_poles = len(pole_x1_cols)
+
 # model
-num_keypoints = 4 * args.number_of_poles
+num_keypoints = 4 * num_poles
 model = snowPoleResNet50(pretrained=True, requires_grad=True, num_keypoints=num_keypoints).to(args.device)
 
 #NOTE: No longer using CO_and_WA_model.pth

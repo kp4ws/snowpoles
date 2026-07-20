@@ -22,6 +22,7 @@ from tqdm import tqdm
 from scipy.spatial import distance
 import os
 from arg_parser import ArgumentParser
+from config import cameras
 
 # Argument parser
 args = ArgumentParser("Evaluate model on the train/val images")
@@ -55,12 +56,13 @@ def predict(model, data, eval='eval'):
         for i, data in tqdm(enumerate(data)): 
             image, keypoints = data['image'].to(args.device), data['keypoints'].to(args.device)
             filename = data['filename']
-            camera = filename.split('_')[0]
-            #Camera = "_".join(filename.split("_")[:2])
+            camera_id = filename.split('_')[0]
+            camera_cfg = cameras.get(camera_id)
+            active_poles = camera_cfg.get("active_poles", [])
 
             current_row_idx = len(evaluation_data["filename"])
             
-            evaluation_data["camera"].append(camera)
+            evaluation_data["camera"].append(camera_id)
             evaluation_data['filename'].append(filename)
 
             ## add an empty dimension for sample size
@@ -74,8 +76,7 @@ def predict(model, data, eval='eval'):
 
             utils.eval_keypoints_plot(args, filename, image, outputs, eval, orig_keypoints=keypoints) ## visualize points
             
-            for j in range(args.number_of_poles):
-                poleId = j+1
+            for j, poleId in enumerate(active_poles):
                 
                 x1_true = keypoints[2*j, 0]
                 y1_true = keypoints[2*j, 1]
@@ -92,7 +93,7 @@ def predict(model, data, eval='eval'):
                 total_length_pixel_actual_224 = distance.euclidean([x1_true, y1_true], [x2_true, y2_true])
 
                 try:
-                    camera_row = metadata[metadata['camera_id'] == camera].iloc[0]
+                    camera_row = metadata[metadata['camera_id'] == camera_id].iloc[0]
                     full_length_pole_cm = float(camera_row[f"s{poleId}_pole_length_cm"])
                     pixel_cm_conversion = float(camera_row[f"s{poleId}_pixel_cm_conversion"])
 

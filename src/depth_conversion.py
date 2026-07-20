@@ -14,7 +14,7 @@ import pandas as pd
 from tqdm import tqdm
 from scipy.spatial import distance
 from pathlib import Path
-
+from config import cameras
 from arg_parser import ArgumentParser
 
 def main():
@@ -30,18 +30,19 @@ def main():
 
     for i, filename in tqdm(enumerate(predictions['filename'])):
         try: 
-            camera = Path(filename).name.split("_")[0]
+            camera_id = Path(filename).name.split("_")[0]
+            camera_cfg = cameras.get(camera_id)
+            active_poles = camera_cfg.get("active_poles", [])
             
             current_idx = len(depth_data['filename'])
 
-            depth_data["camera_id"].append(camera)
+            depth_data["camera_id"].append(camera_id)
             depth_data["filename"].append(filename)
 
-            camera_meta = metadata[metadata["camera_id"] == camera]
+            camera_meta = metadata[metadata["camera_id"] == camera_id]
             img_row = predictions[predictions['filename'] == filename]
 
-            for j in range(args.number_of_poles):
-                poleId = j+1
+            for poleId in active_poles:
 
                 full_length_pole_cm = camera_meta[f's{poleId}_pole_length_cm'].values[0]
                 pixel_cm_conversion = camera_meta[f's{poleId}_pixel_cm_conversion'].values[0]

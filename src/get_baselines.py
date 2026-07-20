@@ -1,6 +1,6 @@
 '''
 Used to retrieve baseline (snow-free) images for each camera site.
-Upon selecting baseline images, they'll be copied and added to the current camera's photos and named "00_baseline.jpg"
+Upon selecting baseline images, they'll be copied and added to the current camera's photos and named "zz_baseline.jpg"
 
 When selecting the baseline image in the file browser window, you can adjust the view settings in the top right and select "extra large icons" to easily see the images
 '''
@@ -68,13 +68,13 @@ def main():
             continue 
 
         #Get baseline image for current camera site
-        baseline_file = cam_dir / "00_baseline.jpg"
+        baseline_file = cam_dir / "zz_baseline.jpg"
         #If baseline image doesn't currently exist, prompt user to select baseline image
         if not baseline_file.exists():
             try:
                 #Prompt user to select baseline image
                 selected_file = find_and_confirm_baseline_image(cam_dir, camera_id)
-                #Copy and rename selected file to "00_baseline.jpg" in same folder
+                #Copy and rename selected file to "zz_baseline.jpg" in same folder
                 shutil.copy(selected_file, baseline_file)
                 print(f"Saved local baseline image: {baseline_file}")
             except Exception as e:
