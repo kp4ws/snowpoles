@@ -1,3 +1,11 @@
+"""
+Author: Kent Pawson (2026)
+
+Used to rename and date all camera images, so they have a standard naming format.
+
+py src/rename_and_date_images.py
+"""
+
 from pathlib import Path
 from datetime import datetime
 from PIL import Image

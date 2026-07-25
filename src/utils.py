@@ -1,3 +1,10 @@
+"""
+Original author: Catherine Breen (July 1, 2024)
+Updated by: Kent Pawson (2026) Adapted for multi-pole keypoint configuration and custom dataset pipelines.
+
+Utility script, containing various helper functions used by different scripts in this project.
+"""
+
 import matplotlib.pyplot as plt
 import numpy as np
 import cv2 

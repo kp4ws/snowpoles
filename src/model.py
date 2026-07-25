@@ -1,6 +1,7 @@
 '''
-Catherine Breen
-cbreen@uw.edu
+Original author: Catherine Breen (July 1, 2024)
+Updated by: Kent Pawson (2026) Adapted for multi-pole keypoint configuration and custom dataset pipelines.
+
 adapted from: 
 https://debuggercafe.com/advanced-facial-keypoint-detection-with-pytorch/
 

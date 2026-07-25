@@ -1,30 +1,23 @@
-## overview
+## Overview
+TODO
+
 We present a model that faciltates snow depth extraction from snow poles by identifying the top and bottom of the pole and calculating the length of the pole in pixels that can be converted to depth. The model contains a neural network with ResNet50 architecture (pre-trained with ImageNet) trained on 9721 images of snowpoles installed in front of time-lapse cameras. The images are from 32 different sites in Okanogan County, Washington, USA, and Grand Mesa, Colorado, USA. We welcome testing of the model on your site, but we recommend an additional training step for best results in your area of interest. More info on each script in the codebase is below. 
 
 ### Example images (image: left; model prediction: right)
-
+TODO
 <img src="https://github.com/CV4EcologySchool/snow-Dayz/blob/main/snowpoles/example_imgs/E6A_WSCT0293.JPG" style="width: 350px;"> <img src="https://github.com/CV4EcologySchool/snow-Dayz/blob/main/snowpoles/example_imgs/eval_E6A_WSCT0293.JPG.png" width="50%">
 
-## Model environment
-
-To set up the model for the demo and all remaining scripts, we want to make sure we have the right Python environment. To do so, download the github folder, navigate to the folder in your command line, then run the following to install the appropriate packages for the model. 
-
+## Setup & Installation
+1. Open your terminal and create a virtual environtment:
 ```
-conda env update -f environment.yml
+python -m venv venv
 ```
-
-## Model demo
-
-We recommend starting with the demo script to ensure proper folder, model download, and conda environment set-up. For the demo, run the following line after navigating to this folder in your command line. The script is set-up to use the example files (from 'example_data') and to download the model to your local machine. Note: If you had trouble on the conda install, feel free to try the src/demo.py script, installing the packages listed in the script using your preferred enviroment manager. 
-
+2. Activate the virtual environment and install the required dependencies (in the terminal window):
 ```
-conda activate snowkeypoint
-python src/demo.py 
+venv/Scripts/activate
+pip install -r requirements.txt
 ```
-This will create a folder called "demo_predictions" in your downloaded repository folder with the predictions from the model and a csv of snowdepth. It will also create a local folder on your machine with the trained model and weights. 
-
-> [!IMPORTANT]  
-> Because the model was trained on data in Washington and Colorado, the accuracy on your data for the model "off the shelf" may be lower than what we reported in the paper. To obtain better accuracy, we recommend fine-tuning the model (more on that below). If you'd like the model off the shelf, you can skip right to step 3 (Predictions), which will run the model as is on your data without fine-tuning. 
+3. Ensure you have Microsoft Visual C++ Redistributable installed (required for PyTorch binaries on Windows). This package can be found here: https://aka.ms/vs/16/release/vc_redist.x64.exe
 
 ## Retraining for more accurate predictions
 
@@ -122,17 +115,10 @@ EXAMPLE:
 python src/depth_conversion.py --predictions_path '/predictions/results.csv' --metadata 'example_nontrained_data/pole_metadata.csv'
 ```
 
-## Basic packages:
-- pytorch
-- numpy
 
-
-## other resources
+## Other resources
 Breen, C. M., Currier, W. R., Vuyovich, C., Miao, Z., & Prugh, L. R. (2024). Snow Depth Extraction From Time‐Lapse Imagery Using a Keypoint Deep Learning Model. Water Resources Research, 60(7), e2023WR036682. https://doi.org/10.1029/2023WR036682
 
 Breen, C. M., C. Hiemstra, C. M. Vuyovich, and M. Mason. (2022). SnowEx20 Grand Mesa Snow Depth from Snow Pole Time-Lapse Imagery, Version 1 [Data Set]. Boulder, Colorado USA. NASA National Snow and Ice Data Center Distributed Active Archive Center. https://doi.org/10.5067/14EU7OLF051V. Date Accessed 04-13-2023.
 
 Raleigh, M. S., W. R. Currier, J. D. Lundquist, P. Houser and C. Hiemstra. 2022. SnowEx17 TimeLapse Imagery, Version 1. [Data Set]. Boulder, Colorado USA. NASA National Snow and Ice Data Center Distributed Active Archive Center. https://doi.org/10.5067/WYRNU50R9L5R. Date Accessed 04-14-2023.
-
-
-

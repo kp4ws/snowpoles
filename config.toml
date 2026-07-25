@@ -9,7 +9,8 @@ labels = 'CHRL_data/labels.csv'
 pole_metadata = 'CHRL_data/pole_metadata.csv'
 
 # Model paths
-pretrained_model = "" # Alternative path to model if it doesn't exist within models_output directory
+pretrained_model = "models/CO_and_WA_model.pth" # Breen's existing model
+trained_model_name = "model.pth"
 models_output = 'C:\Users\pawsonk\Coastal Hydrology\output\models'
 images_output = 'C:\Users\pawsonk\Coastal Hydrology\output\images'
 
@@ -18,16 +19,16 @@ images_output = 'C:\Users\pawsonk\Coastal Hydrology\output\images'
 # ====================================
 [labeling]
 #Higher target count has better accuracy but takes longer to label
-target_label_count = 25 # The total amount of images to label per site
+target_label_count = 40 # The total amount of images to label per site
 
 # ====================================
 # TRAINING Configuration
 # ====================================
 [training]
-lr = 0.001 # Learning Rate 
+lr = 0.0001 # Learning Rate
 epochs = 200 # Epochs
 batch_size = 8 # Batch size
-aug = false # whether to augment the data or not
+aug = true # whether to augment the data or not
 
 #Hardware execution
 device = "cpu" # Device to use, either "cuda" or "cpu".
@@ -49,7 +50,7 @@ enabled = false
 total_poles = 3
 active_poles = [1, 2, 3]
 upside_down = true
-enabled = false
+enabled = true
 
 [cameras.CTRL1]
 total_poles = 3

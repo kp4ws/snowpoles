@@ -1,8 +1,12 @@
 '''
+Author: Kent Pawson (2026)
 Used to retrieve baseline (snow-free) images for each camera site.
 Upon selecting baseline images, they'll be copied and added to the current camera's photos and named "zz_baseline.jpg"
 
 When selecting the baseline image in the file browser window, you can adjust the view settings in the top right and select "extra large icons" to easily see the images
+NOTE: Baseline images should ideally be picked from the start of the season (or when the poles are installed).
+
+py src/get_baselines.py
 '''
 
 from pathlib import Path

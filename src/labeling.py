@@ -1,26 +1,12 @@
 """
-written by Catherine M. Breen 
-cbreen@uw.edu 
+Original author: Catherine Breen (July 1, 2024)
+Updated by: Kent Pawson (2026) Adapted for multi-pole keypoint configuration and custom dataset pipelines. 
 
 Use of our keypoint detection model currently requires ~10 images per camera. We provide a labeling script below that when pointed 
 at a camera directory (i.e., data > cam1 or data > cam2, etc), walks the user through labeling every 10th image and saves as labels.csv in a specified direrctory. 
-
-We estimate it will take about 5 imgs/min or about 300 imgs per hour. 
-
-x1,y1 = top 
-x2,y2 = bottom
-
 The labels.csv file can then be directly pointed at train.py for fine-tuning. The user can then run predict.py to extract the snow depth.
 
-example run 
-
-python src/labeling.py --datapath "/path/to/nontrained/data" --pole_length "304.8" --subset_to_label "2"
-python src/labeling.py --datapath "/Users/cmbreen/Documents/FDLTCC/FF_2024" --subset_to_label "10"
-
-python src/labeling.py --datapath "/Users/cmbreen/Documents/FDLTCC/summer_2025/FF_2024" --subset_to_label "10"
-
-
-
+python src/labeling.py 
 """
 
 import cv2

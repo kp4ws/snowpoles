@@ -1,3 +1,11 @@
+"""
+Author: Kent Pawson (2026)
+
+Generates pixel to cm conversion metadata for each of the active camera sites/poles.
+
+py src/px_cm_conversion.py
+"""
+
 import cv2
 import matplotlib.pyplot as plt
 import math

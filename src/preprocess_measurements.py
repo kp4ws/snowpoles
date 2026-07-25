@@ -1,3 +1,11 @@
+"""
+Author: Kent Pawson (2026)
+
+Used to create a clean copy of the stake_measurements.csv containing relevant columns for the project.
+
+py src/preprocess_measurements.py
+"""
+
 import pandas as pd
 
 def process_stake_measurements(path, file):

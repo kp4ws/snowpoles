@@ -1,3 +1,12 @@
+"""
+Author: Kent Pawson 2026
+
+Contains ArgumentParser, a wrapper class for parsing arguments and providing them to be used in the various scripts
+Communicates with config.py to retrieve arguments from configuration file.
+
+Recommended use case is to specify all arguments in config.toml so you don't have to manually enter them when you run the programs in this project.
+"""
+
 import argparse
 import os
 from config import paths, labeling, training
@@ -32,13 +41,15 @@ class ArgumentParser():
     def _get_arguments(self):
         # Get arguments from config if they weren't specified
         if not self.args.model_path:
-            config_pretrained = paths.get("pretrained_model", "").strip()
-
-            if config_pretrained:
-                self.args.model_path = config_pretrained
+            models_output_dir = paths.get("models_output", "output/models")
+            default_trained_path = os.path.normpath(os.path.join(models_output_dir, paths.get("trained_model_name", "model.pth")))
+            
+            # Check if fine-tuned model actually exists from a completed training run
+            if os.path.exists(default_trained_path):
+                self.args.model_path = default_trained_path
             else:
-                models_output_dir = paths.get("models_output", "output/models")
-                self.args.model_path = os.path.normpath(os.path.join(models_output_dir, "model.pth"))
+                # Fallback to base pretrained model if no trained model is found yet
+                self.args.model_path = paths.get("pretrained_model", "").strip()
 
         if not self.args.path:
             self.args.path = paths.get("input_images")
