@@ -61,21 +61,21 @@ num_poles = len(pole_x1_cols)
 num_keypoints = 4 * num_poles
 model = snowPoleResNet50(pretrained=True, requires_grad=True, num_keypoints=num_keypoints).to(args.device)
 
-# checkpoint = torch.load(args.model_path, map_location=torch.device(args.device), weights_only=False)
+checkpoint = torch.load(args.model_path, map_location=torch.device(args.device), weights_only=False)
 
-# state_dict = checkpoint["model_state_dict"]
+state_dict = checkpoint["model_state_dict"]
 
-# #Remove mismatched output layers (due to different number of snow poles)
-# state_dict.pop("l0.weight", None)
-# state_dict.pop("l0.bias", None)
+#Remove mismatched output layers (due to different number of snow poles)
+state_dict.pop("l0.weight", None)
+state_dict.pop("l0.bias", None)
 
-# model.load_state_dict(state_dict, strict=False)
+model.load_state_dict(state_dict, strict=False)
 
 print("fine-tuned model loaded...")
 
 # optimizer
 optimizer = optim.Adam(model.parameters(), lr=args.lr)
-scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, patience=10, factor=0.5)
+scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, patience=15, factor=0.5, min_lr=1e-6)
 criterion = nn.SmoothL1Loss()
 
 # training function

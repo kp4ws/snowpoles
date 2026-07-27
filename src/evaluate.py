@@ -38,10 +38,7 @@ def load_model():
     
     # load model weights state_dict
     state_dict = checkpoint['model_state_dict']
-    # state_dict.pop('l0.weight', None)
-    # state_dict.pop('l0.bias', None)
-
-    model.load_state_dict(state_dict, strict=False)
+    model.load_state_dict(state_dict, strict=True)
     model.eval()
     return model
 

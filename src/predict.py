@@ -63,10 +63,7 @@ def load_model(args):
     checkpoint = torch.load(model_path, map_location=torch.device(args.device), weights_only=False)
 
     state_dict = checkpoint['model_state_dict']
-    # state_dict.pop('l0.weight', None)
-    # state_dict.pop('l0.bias', None)
-
-    model.load_state_dict(state_dict, strict=False)
+    model.load_state_dict(state_dict, strict=True)
     model.eval()
     return model
 
@@ -147,12 +144,6 @@ def predict(model, args, device):
                 x2_pred = pred_keypoint[base + 2] * (w / 224)
                 y2_pred = pred_keypoint[base + 3] * (h / 224)
 
-                if camera_cfg.get("upside_down", False):
-                    x1_pred = w - x1_pred
-                    y1_pred = h - y1_pred
-                    x2_pred = w - x2_pred
-                    y2_pred = h - y2_pred
-
                 pred_keypoint[base + 0] = x1_pred
                 pred_keypoint[base + 1] = y1_pred
                 pred_keypoint[base + 2] = x2_pred
@@ -184,6 +175,12 @@ def predict(model, args, device):
 
             if i % 100 == 0: 
                 vis_predicted_keypoints(filename, image, pred_keypoint, args=args) 
+
+            if camera_cfg.get("upside_down", False):
+                x1_pred = w - x1_pred
+                y1_pred = h - y1_pred
+                x2_pred = w - x2_pred
+                y2_pred = h - y2_pred
             
     results = pd.DataFrame(predictions_data)
     results.to_csv(f"{args.models_output}/predictions/results.csv")
@@ -198,6 +195,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
-
-
