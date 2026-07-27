@@ -1,13 +1,13 @@
 '''
-written by Catherine Breen 
-June 2024
+Original author: Catherine Breen (July 1, 2024)
+Updated by: Kent Pawson (2026) Adapted for multi-pole keypoint configuration and custom dataset pipelines.
 
 If after the predictions you want to predict snow depth again
 such as if you have improved metadata, you can run this script by itself on the predictions and the metadata
 
 example command line to run:
 
-python src/depth_conversion.py --predictions_path '/predictions/results.csv' --metadata 'example_nontrained_data/pole_metadata.csv'
+python src/depth_conversion.py
 
 '''
 import pandas as pd
@@ -32,8 +32,16 @@ def main():
         try: 
             camera_id = Path(filename).name.split("_")[0]
             camera_cfg = cameras.get(camera_id)
-            active_poles = camera_cfg.get("active_poles", [])
             
+            if not camera_cfg:
+                continue
+
+            active_poles = camera_cfg.get("active_poles", [])
+            is_enabled = camera_cfg.get("enabled", True)
+
+            if not is_enabled or not active_poles:
+                continue
+
             current_idx = len(depth_data['filename'])
 
             depth_data["camera_id"].append(camera_id)

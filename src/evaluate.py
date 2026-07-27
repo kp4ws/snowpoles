@@ -1,4 +1,6 @@
 '''
+Original author: Catherine Breen (July 1, 2024)
+Updated by: Kent Pawson (2026) Adapted for multi-pole keypoint configuration and custom dataset pipelines.
 
 load model and run on data points 
 export the csv of the data points and just use the bottom
@@ -33,8 +35,13 @@ def load_model():
     model_path = args.model_path
     checkpoint = torch.load(model_path, map_location=torch.device(args.device), weights_only=False)
     print(f"loading model from the following path: {args.model_path}")
+    
     # load model weights state_dict
-    model.load_state_dict(checkpoint['model_state_dict'])
+    state_dict = checkpoint['model_state_dict']
+    # state_dict.pop('l0.weight', None)
+    # state_dict.pop('l0.bias', None)
+
+    model.load_state_dict(state_dict, strict=False)
     model.eval()
     return model
 
@@ -58,7 +65,15 @@ def predict(model, data, eval='eval'):
             filename = data['filename']
             camera_id = filename.split('_')[0]
             camera_cfg = cameras.get(camera_id)
+
+            if not camera_cfg:
+                continue
+
             active_poles = camera_cfg.get("active_poles", [])
+            is_enabled = camera_cfg.get("enabled", True)
+
+            if not is_enabled or not active_poles:
+                continue
 
             current_row_idx = len(evaluation_data["filename"])
             

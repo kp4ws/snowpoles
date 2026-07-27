@@ -1,6 +1,6 @@
 '''
-written by: Catherine Breen
-June 2024
+Original author: Catherine Breen (July 1, 2024)
+Updated by: Kent Pawson (2026) Adapted for multi-pole keypoint configuration and custom dataset pipelines.
 
 Training script for users to fine tune model from Breen et. al 2024
 Please cite: 
@@ -101,18 +101,18 @@ class snowPoleDataset(Dataset):
         if aug == False: 
             self.transform = A.Compose([
                 A.Resize(224, 224),
-                ], keypoint_params=A.KeypointParams(format='xy'))
+                ], keypoint_params=A.KeypointParams(format='xy', remove_invisible=False))
         else: 
             self.transform = A.Compose([
                 A.ToFloat(max_value=1.0),
-                A.CropAndPad(px=75, p =1.0), ## final model is 50 pixels
-                A.ShiftScaleRotate(shift_limit=0.05, scale_limit=0.2, rotate_limit=20, p=0.5),
+                # A.CropAndPad(px=50, p =1.0), ## final model is 50 pixels
+                # A.ShiftScaleRotate(shift_limit=0.02, scale_limit=0.1, rotate_limit=5, p=0.5),
                 A.OneOf([
                     A.RandomBrightnessContrast(p=0.5),
                     A.ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2, hue=0.2, always_apply=False, p=0.5),
                     A.ToGray(p=0.5)], p = 0.5),
                 A.Resize(224, 224),
-                ], keypoint_params=A.KeypointParams(format='xy'))
+                ], keypoint_params=A.KeypointParams(format='xy', remove_invisible=False))
 
     def __len__(self):
         return len(self.data)
@@ -125,14 +125,16 @@ class snowPoleDataset(Dataset):
         row = self.data.iloc[index]
         filename = row['filename']
         cameraID = row['camera_id']
-
-        #TODO: Should we throw error here if camera cfg doesn't exist?
         camera_cfg = cameras.get(cameraID)
         active_poles = camera_cfg.get("active_poles", [])
 
         #Read and prepare image
         image = cv2.imread(parents[self.data.iloc[index]["filename"]])
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+
+        if camera_cfg.get("upside_down", False):
+            image = cv2.rotate(image, cv2.ROTATE_180)
+        
         orig_h, orig_w, channel = image.shape
 
         #Scale pixel values to [0, 1] and resize to 224x224

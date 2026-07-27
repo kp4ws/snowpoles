@@ -1,6 +1,6 @@
 '''
-written by: Catherine Breen
-July 1, 2024
+Original author: Catherine Breen (July 1, 2024)
+Updated by: Kent Pawson (2026) Adapted for multi-pole keypoint configuration and custom dataset pipelines.
 
 Training script for users to fine tune model from Breen et. al 2024
 Please cite: 
@@ -9,9 +9,7 @@ Breen, C. M., Currier, W. R., Vuyovich, C., Miao, Z., & Prugh, L. R. (2024).
 Snow Depth Extraction From Time‐Lapse Imagery Using a Keypoint Deep Learning Model. 
 Water Resources Research, 60(7), e2023WR036682. https://doi.org/10.1029/2023WR036682
 
-Example run:
-python src/predict.py --model_path './output1/model.pth' --img_dir './nontrained_data'  --metadata './nontrained_data/pole_metadata.csv'
-
+python src/predict.py
 
 '''
 
@@ -52,12 +50,23 @@ def vis_predicted_keypoints(file, image, keypoints, color=(0, 255, 0), diameter=
     plt.close()
 
 def load_model(args):
-    model = snowPoleResNet50(pretrained=False, requires_grad=False).to(args.device)
+    labels_path = Path(args.path) / "labels.csv"
+    df_labels = pd.read_csv(labels_path)
+    pole_x1_cols = [col for col in df_labels.columns if col.endswith("_x1")]
+    num_poles = len(pole_x1_cols)
+    num_keypoints = 4 * num_poles
+
+    model = snowPoleResNet50(pretrained=False, requires_grad=False, num_keypoints=num_keypoints).to(args.device)
     # load the model checkpoint
     #torch.serialization.add_safe_globals([torch.nn.modules.loss.SmoothL1Loss])
     model_path = args.model_path
     checkpoint = torch.load(model_path, map_location=torch.device(args.device), weights_only=False)
-    model.load_state_dict(checkpoint['model_state_dict'])
+
+    state_dict = checkpoint['model_state_dict']
+    # state_dict.pop('l0.weight', None)
+    # state_dict.pop('l0.bias', None)
+
+    model.load_state_dict(state_dict, strict=False)
     model.eval()
     return model
 
@@ -82,9 +91,20 @@ def predict(model, args, device):
             filename = file_path.name
             camera_id = file_path.stem.split('_')[0]
             camera_cfg = cameras.get(camera_id)
+
+            if not camera_cfg:
+                continue
+
             active_poles = camera_cfg.get("active_poles", [])
+            is_enabled = camera_cfg.get("enabled", True)
+
+            if not is_enabled or not active_poles:
+                continue
 
             image = cv2.imread(str(file))
+            if camera_cfg.get("upside_down", False):
+                image = cv2.rotate(image, cv2.ROTATE_180)
+
             creationTime = os.path.getmtime(file)
             dt_c = datetime.datetime.fromtimestamp(creationTime)
             formatted_datetime = dt_c.strftime("%m/%d/%Y %H:%M")
@@ -114,7 +134,7 @@ def predict(model, args, device):
             image = image.squeeze()
             image = image.cpu()
             image = np.transpose(image, (1, 2, 0))
-            image = np.array(image, dtype='float32')
+            image = np.asarray(image, dtype='float32')
 
             ## resize back up to original size and project predicted points onto original size
             image = cv2.resize(image, (w, h))
@@ -126,6 +146,12 @@ def predict(model, args, device):
                 y1_pred = pred_keypoint[base + 1] * (h / 224)
                 x2_pred = pred_keypoint[base + 2] * (w / 224)
                 y2_pred = pred_keypoint[base + 3] * (h / 224)
+
+                if camera_cfg.get("upside_down", False):
+                    x1_pred = w - x1_pred
+                    y1_pred = h - y1_pred
+                    x2_pred = w - x2_pred
+                    y2_pred = h - y2_pred
 
                 pred_keypoint[base + 0] = x1_pred
                 pred_keypoint[base + 1] = y1_pred
