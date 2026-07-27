@@ -20,5 +20,8 @@ interns_2025
 *.ckpt
 .vscode/
 .idea/
-CHRL_data/
+CHRL_data/backup/*
+CHRL_data/sites/*
+CHRL_data/labels.csv
+CHRL_data/pole_metadata.csv
 internal/
