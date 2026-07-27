@@ -15,7 +15,6 @@ import torch
 import cv2
 import pandas as pd
 import numpy as np
-import tomli as tomllib
 import utils
 from torch.utils.data import Dataset, DataLoader
 import torch
@@ -23,16 +22,7 @@ import albumentations as A ### better for keypoint augmentations, pip install al
 from sklearn.model_selection import train_test_split
 import os
 from pathlib import Path
-from config import cameras
-
-# Load config from config.toml
-with open("config.toml", "rb") as configfile:
-    config = tomllib.load(configfile)
-
-# Load config from config.toml
-with open("config.toml", "rb") as configfile:
-    config = tomllib.load(configfile)
-
+from config import cameras, paths, training
 
 def apply_filter(image):
     # width, height, __ = image.shape
@@ -93,10 +83,10 @@ def train_test_split(csv_path, image_path):
     validation_samples = validation_samples.reset_index(drop=True)
     
     # save labels to output folder
-    if not os.path.exists(f"{config['paths']['models_output']}"):
-        os.makedirs(f"{config['paths']['models_output']}", exist_ok=True)
-    training_samples.to_csv(f"{config['paths']['models_output']}/training_samples.csv")
-    validation_samples.to_csv(f"{config['paths']['models_output']}/validation_samples.csv")
+    if not os.path.exists(f"{paths.get('models_output')}"):
+        os.makedirs(f"{paths.get('models_output')}", exist_ok=True)
+    training_samples.to_csv(f"{paths.get('models_output')}/training_samples.csv")
+    validation_samples.to_csv(f"{paths.get('models_output')}/validation_samples.csv")
 
     print(f'# of examples we will now train on {len(training_samples)}, val on {len(validation_samples)}')
     return training_samples, validation_samples
@@ -153,10 +143,10 @@ class snowPoleDataset(Dataset):
         image = cv2.resize(image, (self.resize, self.resize))
 
         #Apply HSV snow filter (if turned on in config)
-        if config['training']['filter']: 
+        if training.get('filter'): 
             image = apply_filter(image)
             if index % 100 == 0: 
-                cv2.imwrite(f"{config['paths']['models_output']}/filtered_{filename}", image)
+                cv2.imwrite(f"{paths.get('models_output')}/filtered_{filename}", image)
 
         #The columns that correspond to the keypoints in our dataframe
         keypoint_columns = []
@@ -196,34 +186,33 @@ class snowPoleDataset(Dataset):
 
 # get the training and validation data samples
 training_samples, validation_samples = train_test_split(
-    f"{config['paths']['labels']}", config['paths']['input_images']
+    f"{paths.get('labels')}", paths.get('data_directory')
 )
 
-#{config['paths']['input_images']}/
 
 # initialize the dataset - `snowPoleDataset()`
 train_data = snowPoleDataset(
     training_samples,
-    f"{config['paths']['input_images']}",
-    aug=config['training']['aug'],
+    f"{paths.get('data_directory')}",
+    aug=training.get('aug'),
 )  ## we want all folders
 
 validation_data = snowPoleDataset(
     validation_samples, 
-    f"{config['paths']['input_images']}", 
+    f"{paths.get("input_images")}", 
     aug=False
 )  # we always want the transform to be the normal transform
 
 # # prepare data loaders
 train_loader = DataLoader(
     train_data, 
-    batch_size=config['training']['batch_size'], 
+    batch_size=training.get('batch_size'), 
     shuffle=True, 
     num_workers=0
 )
 validation_loader = DataLoader(
     validation_data,
-    batch_size=config['training']['batch_size'],
+    batch_size=training.get('batch_size'),
     shuffle=False,
     num_workers=0,
 )
@@ -231,6 +220,6 @@ validation_loader = DataLoader(
 print(f"Training sample instances: {len(train_data)}")
 print(f"Validation sample instances: {len(validation_data)}")
 
-if config["training"]["show_dataset_plot"]:
+if training.get("show_dataset_plot"):
     utils.dataset_keypoints_plot(train_data)
     utils.dataset_keypoints_plot(validation_data)

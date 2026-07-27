@@ -51,8 +51,8 @@ def find_and_confirm_baseline_image(cam_dir, camera_id):
 def main():
     args = ArgumentParser("Select baseline images")
 
-    data_dir = Path(args.path)
-    cam_dirs = [x for x in data_dir.iterdir() if x.is_dir()]
+    sites_dir = Path(args.path) / "sites"
+    cam_dirs = [x for x in sites_dir.iterdir() if x.is_dir()]
 
     for cam_dir in cam_dirs:
         camera_id = cam_dir.name

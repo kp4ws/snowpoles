@@ -8,16 +8,18 @@ TODO
 <img src="https://github.com/CV4EcologySchool/snow-Dayz/blob/main/snowpoles/example_imgs/E6A_WSCT0293.JPG" style="width: 350px;"> <img src="https://github.com/CV4EcologySchool/snow-Dayz/blob/main/snowpoles/example_imgs/eval_E6A_WSCT0293.JPG.png" width="50%">
 
 ## Setup & Installation
-1. Open your terminal and create a virtual environtment:
+1. Open your terminal and **create a virtual environtment**:
 ```
 python -m venv venv
 ```
-2. Activate the virtual environment and install the required dependencies (in the terminal window):
+2. **Activate** the virtual environment and **install** the required dependencies (in the terminal window):
 ```
 venv/Scripts/activate
 pip install -r requirements.txt
 ```
-3. Ensure you have Microsoft Visual C++ Redistributable installed (required for PyTorch binaries on Windows). This package can be found here: https://aka.ms/vs/16/release/vc_redist.x64.exe
+3. Ensure you have **Microsoft Visual C++ Redistributable (vc_redist.x64)** installed (required for PyTorch binaries on Windows). This package can be found here: https://aka.ms/vs/16/release/vc_redist.x64.exe
+
+4. Copy and paste your **camera site image directories** into `CHRL_data/sites/`. Run **rename_and_date_images.py** if images don't follow **"ID_timestamp.jpg"** format.
 
 ## Retraining for more accurate predictions
 

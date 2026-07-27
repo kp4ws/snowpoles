@@ -34,8 +34,8 @@ def main():
     all_camera_rows = []
 
     processed_cameras = set()  # Track which cameras we've already processed
-    data_dir = Path(args.path)
-    cam_dirs = [x for x in data_dir.iterdir() if x.is_dir()]
+    sites_dir = Path(args.path) / "sites"
+    cam_dirs = [x for x in sites_dir.iterdir() if x.is_dir()]
 
     measurement_lookup = get_stake_lengths("CHRL_data/stake_measurements_clean.csv")
 

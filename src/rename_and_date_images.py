@@ -61,6 +61,7 @@ def get_image_datetime_exif(image_path, exif_field="DateTime") -> datetime:
     return detected_datetime
 
 #Extract data from trail cam images
+#TODO Need to update directory structure
 source_dir = Path("CHRL_data/trail_cameras")
 destination_dir = Path("CHRL_data/trail_cameras_processed")
 

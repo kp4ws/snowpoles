@@ -4,7 +4,7 @@
 # Traversing up is supported. Use ".." in the path to go up a directory.
 # ====================================
 [paths]
-input_images = 'CHRL_data'
+data_directory = 'CHRL_data'
 labels = 'CHRL_data/labels.csv'
 pole_metadata = 'CHRL_data/pole_metadata.csv'
 
