@@ -28,7 +28,7 @@ target_label_count = 40 # The total amount of images to label per site
 lr = 0.0001 # Learning Rate
 epochs = 200 # Epochs
 batch_size = 8 # Batch size
-aug = true # whether to augment the data or not
+aug = false # whether to augment the data or not
 
 #Hardware execution
 device = "cpu" # Device to use, either "cuda" or "cpu".

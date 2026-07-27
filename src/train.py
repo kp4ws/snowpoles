@@ -1,6 +1,6 @@
 '''
-written by: Catherine Breen
-July 1, 2024
+Original author: Catherine Breen (July 1, 2024)
+Updated by: Kent Pawson (2026) Adapted for multi-pole keypoint configuration and custom dataset pipelines.
 
 Training script for users to fine tune model from Breen et. al 2024
 Please cite: 
@@ -9,7 +9,6 @@ Breen, C. M., Currier, W. R., Vuyovich, C., Miao, Z., & Prugh, L. R. (2024).
 Snow Depth Extraction From Time‐Lapse Imagery Using a Keypoint Deep Learning Model. 
 Water Resources Research, 60(7), e2023WR036682. https://doi.org/10.1029/2023WR036682
 
-example run (after updating config)
 python src/train.py
 
 tensorboard --logdir=runs
@@ -62,15 +61,21 @@ num_poles = len(pole_x1_cols)
 num_keypoints = 4 * num_poles
 model = snowPoleResNet50(pretrained=True, requires_grad=True, num_keypoints=num_keypoints).to(args.device)
 
-#NOTE: No longer using CO_and_WA_model.pth
-#Commented out because we want train.py to build a model from ground up (without using an existing checkpoint)
 # checkpoint = torch.load(args.model_path, map_location=torch.device(args.device), weights_only=False)
-# model.load_state_dict(checkpoint["model_state_dict"])
 
-# print("fine-tuned model loaded...")
+# state_dict = checkpoint["model_state_dict"]
+
+# #Remove mismatched output layers (due to different number of snow poles)
+# state_dict.pop("l0.weight", None)
+# state_dict.pop("l0.bias", None)
+
+# model.load_state_dict(state_dict, strict=False)
+
+print("fine-tuned model loaded...")
 
 # optimizer
 optimizer = optim.Adam(model.parameters(), lr=args.lr)
+scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, patience=10, factor=0.5)
 criterion = nn.SmoothL1Loss()
 
 # training function
@@ -131,9 +136,7 @@ def validate(model, dataloader, data, epoch):
             # ... predefined number of epochs
             if not os.path.exists(args.models_output):
                 os.makedirs(args.models_output, exist_ok=True)
-            if (
-                epoch + 1
-            ) % 1 == 0 or i == 20:  # make this not 0 to get a different image
+            if (epoch + 1) % 10 == 0:
                 utils.valid_keypoints_plot(args, image, outputs, keypoints, epoch)
         
     valid_loss = valid_running_loss/counter
@@ -177,10 +180,12 @@ for epoch in range(args.epochs):
                 best_loss_val = val_epoch_loss
                 best_loss_val_epoch = epoch
                 best_model_weights = copy.deepcopy(model.state_dict())
-    elif epoch > best_loss_val_epoch + 25: #TODO Determine best number to put here
+    elif epoch > best_loss_val_epoch + 25:
             ### save model at lowest val error, rather than 10 epochs later 
             model.load_state_dict(best_model_weights)
             break
+    
+    scheduler.step(val_epoch_loss)
 
 # loss plots
 plt.figure(figsize=(10, 7))
