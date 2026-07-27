@@ -182,6 +182,7 @@ class snowPoleDataset(Dataset):
             'filename': filename
         }
 
+print("Preparing training and validation samples...")
 # get the training and validation data samples
 training_samples, validation_samples = train_test_split(
     f"{paths.get('labels')}", paths.get('data_directory')
@@ -197,10 +198,11 @@ train_data = snowPoleDataset(
 
 validation_data = snowPoleDataset(
     validation_samples, 
-    f"{paths.get("input_images")}", 
+    f"{paths.get('input_images')}", 
     aug=False
 )  # we always want the transform to be the normal transform
 
+print("Preparing data loaders")
 # # prepare data loaders
 train_loader = DataLoader(
     train_data, 

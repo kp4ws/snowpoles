@@ -139,6 +139,7 @@ def validate(model, dataloader, data, epoch):
     valid_loss = valid_running_loss/counter
     return valid_loss
 
+print("Training Starting...")
 train_loss = []
 val_loss = []
 ## early stopping ##

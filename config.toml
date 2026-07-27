@@ -11,8 +11,8 @@ pole_metadata = 'CHRL_data/pole_metadata.csv'
 # Model paths
 pretrained_model = "models/CO_and_WA_model.pth" # Breen's existing model
 trained_model_name = "model.pth"
-models_output = 'C:\Users\pawsonk\Coastal Hydrology\output\models'
-images_output = 'C:\Users\pawsonk\Coastal Hydrology\output\images'
+models_output = 'models/output'
+images_output = 'images/output'
 
 # ====================================
 # LABELING Configuration
