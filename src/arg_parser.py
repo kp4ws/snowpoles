@@ -52,7 +52,7 @@ class ArgumentParser():
                 self.args.model_path = paths.get("pretrained_model", "").strip()
 
         if not self.args.path:
-            self.args.path = paths.get("input_images")
+            self.args.path = paths.get("data_directory")
         if not self.args.device:
             self.args.device = training.get("device", "cpu")
         if not self.args.target_label_count:
@@ -82,7 +82,7 @@ class ArgumentParser():
                 print(f"Model to use:\n{os.getcwd()}\n")
             
             if(self.args.path.startswith("/")):
-                print(f"Directory where images are located:\n{self.args.path}")
+                print(f"Directory where images are located:\n{self.args.path}/sites")
             else:
                 print(f"Directory where images are located:\n{os.getcwd()}\n")
 

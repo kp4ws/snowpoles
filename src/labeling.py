@@ -75,8 +75,8 @@ def main():
     ))
 
     ### loop to label every nth photo!
-    input_images = Path(args.path)
-    cam_dirs = [item for item in input_images.iterdir() if item.is_dir()]
+    sites_dir = Path(args.path) / "sites"
+    cam_dirs = [item for item in sites_dir.iterdir() if item.is_dir()]
 
     for cam_dir in cam_dirs:
         camera_id = cam_dir.name

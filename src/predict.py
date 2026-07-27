@@ -72,9 +72,8 @@ def predict(model, args, device):
     }
 
     ## folder or directory
-    #IPython.embed()
-    #snowpolefiles = glob.glob(f"{args.path}/**/*")
-    snowpolefiles = list(Path(args.path).rglob("*.JPG"))
+    sites_dir = Path(args.path) / "sites"
+    snowpolefiles = list(sites_dir.rglob("*.JPG"))
     metadata = pd.read_csv(f"{args.path}/pole_metadata.csv")
 
     with torch.no_grad():
