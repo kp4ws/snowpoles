@@ -126,7 +126,12 @@ def predict(model, data, eval='eval'):
 
                     # MAPE
                     mape_error = utils.MAPE(total_length_pixel_actual_224, total_length_pixel_224)
-                    mape_error_sd = utils.MAPE(manual_snowdepth, automated_sd)
+
+                    #Only calculate MAPE if there is actually enough snow to make a meaningful percentage
+                    if manual_snowdepth > 5.0:
+                        mape_error_sd = utils.MAPE(manual_snowdepth, automated_sd)
+                    else:
+                        mape_error_sd = None
 
                 except Exception as e:
                     print(f"Error computing error metrics for {filename}, Pole {poleId}: {e}")
