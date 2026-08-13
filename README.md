@@ -1,14 +1,20 @@
-## Overview
-TODO
+# Snow Depth Extraction from Trail Camera Imagery  
+This project provides an automated pipeline to extract snow depth data (in centimeters) from time-lapse trail camera images containing snow poles. The pipeline uses a keypoint detection model to identify the top and bottom of each active pole, calculates its visible length in pixels, and converts those measurements into snow depth.
 
-We present a model that faciltates snow depth extraction from snow poles by identifying the top and bottom of the pole and calculating the length of the pole in pixels that can be converted to depth. The model contains a neural network with ResNet50 architecture (pre-trained with ImageNet) trained on 9721 images of snowpoles installed in front of time-lapse cameras. The images are from 32 different sites in Okanogan County, Washington, USA, and Grand Mesa, Colorado, USA. We welcome testing of the model on your site, but we recommend an additional training step for best results in your area of interest. More info on each script in the codebase is below. 
+*Note: This project is a refactored and adapted version of the original [snowpoles repository](https://github.com/catherine-m-breen/snowpoles) by Catherine M. Breen.*
 
-### Example images (image: left; model prediction: right)
-TODO
-<img src="https://github.com/CV4EcologySchool/snow-Dayz/blob/main/snowpoles/example_imgs/E6A_WSCT0293.JPG" style="width: 350px;"> <img src="https://github.com/CV4EcologySchool/snow-Dayz/blob/main/snowpoles/example_imgs/eval_E6A_WSCT0293.JPG.png" width="50%">
+## Background & Training Datasets
+The core model utilizes a **ResNet50** neural network architecture (pretrained on ImageNet) to detect pole endpoints across varying lighting, weather, and snow conditions.  
+- **Pacific Northwest & Colorado Sites:** Pretrained on 9721 images of snow poles across 32 unique sites in Okanogan County, Washington, USA, and Grand Mesa, Colorado, USA.    
+- **Vancouver Island Sites:** Fine-tuned and validated on local snow pole imagery from the Russell Creek watershed area on Vancouver Island, BC, Canada.  
+
+## Repository Structure
+- `src/`: Contains all the pipeline Python scripts (`predict.py`, `train.py`, `labeling.py`, `config.py`, etc).  
+- `CHRL_data/`: The primary data directory. Contains the `sites/` folder (where you place camera image directories), manual field measurement CSVs, and the generated `pole_metadata.csv` and `labels.csv`.  
+- `models/`: Stores the trained PyTorch model weights and the model outputs from training, prediction, etc.
 
 ## Setup & Installation
-1. Open your terminal and **create a virtual environtment**:
+1. Open your terminal and **create a virtual environment**:
 ```
 python -m venv venv
 ```
@@ -21,104 +27,62 @@ pip install -r requirements.txt
 
 4. Copy and paste your **camera site image directories** into `CHRL_data/sites/`. Run **rename_and_date_images.py** if images don't follow **"ID_timestamp.jpg"** format.
 
-## Retraining for more accurate predictions
+## Configuration and Settings
+Before running the pipeline on a new dataset, update the `config.toml` file and adjust the camera configuration accordingly:  
+- `total_poles`: Should equal the number of poles that are at the corresponding camera site.  
+- `enabled`: Set to true if camera is active.  
+- `active_poles`: Determines which poles are active for the corresponding camera.  
+- `upside_down`: Set to true if the camera was mounted upside down.
 
-Our findings suggested that some labeling of the dataset of interest improved the performance of the model on new datasets. We recommend following the steps below to 1) label a subset of images from each camera from your study for best results. 2) Fine-tune the model using the subset. Then 3) predict on all of your data and convert to snow depth. The overall workflow is summarized in the flowchart below. 
+## The Processing Pipeline
+Optimal keypoint accuracy requires site specific fine-tuning. For each new camera site or seasonal redeployment, label a small baseline subset of images (about 25 per site) to fine-tune the model for the season.
 
-<img src="https://github.com/CV4EcologySchool/snow-Dayz/blob/main/snowpoles/example_imgs/flowchart3.png"> 
+**IMPORTANT:** All terminal commands below must be executed from the root directory of the project, NOT from within the `src/` folder.
 
+The general pipeline follows these steps:  
+1. **Populate trail cam images into the data directory:** Move your site image folders into the designated data path and run the following command to ensure filenames are formatted properly.  
+`python src/rename_and_date_images.py`  
 
-## 1. Labeling subset of images 
+2. **Collect baseline images:** Generate baseline reference images for each camera site.  
+`python src/get_baselines.py`  
 
-- We provide labeling.py to facilitate labeling. The labels are then saved in the right format for re-training the model. To label your own images run the following, updating the arguments with your specific data paths and pole measurements. It will create .csv's called "labels" and "metadata." 'labels" will have the right information for the model, and 'metadata' has the information for the script to subsequently convert to snow depth. 
-    - '--datapath' assumes that your original iamges are saved in a nested subfolder from the root folder called "data". Each camera folder has a unique folder ID that matches the camera ID.
-    - '--pole_length' height of your poles. If they are varying you will need to run this on each individual folder and then combine all the labels into one csv.
-    - 'subset_to_label' this is the spacing between images for each camera. We found that the model is more accurate with less space between images, but about every 10 was the right sequence
- 
-Note: our script "rename_photos.py" checks that the image filenames are in the right format and updates them if not. It assumes the images are in the following tree: image dir > image folder with camera id > filename (see nontrained_data). 
+3. **Collect px to cm conversion ratios:** Calculate the pixel-to-centimeter scale for all active poles using the baseline images.  
+`python src/px_cm_conversion.py`  
 
-GENERIC:
-```
-python src/rename_photos.py 
-python src/labeling.py --datapath [IMAGE_DIRECTORY] --pole_length [POLE LENGTH IN CM] --subset_to_label [# BETWEEN LABELED IMAGES]
-```
-EXAMPLE:
-```
-python preprocess/rename_photos.py 
-python src/labeling.py --datapath 'nontrained_data' --pole_length '304.8' --subset_to_label '10'
-```
+4. **Label:** Annotate a subset of images per site to create training ground truth.  
+`python src/labeling.py`  
 
-> [!NOTE]  
-> The example 'nontrained_data' folder above uses data that was not included in the paper, from the NASA SnowEx 2017 campaign (Raliegh et al. 2022). We used these images to beta test this pipeline further. Simply delete the contents of this folder and replace with the camera folders with your images. We left the data in there so you can see how we organized the camera folders and what labeling.py will generate (labels.csv and metadata.csv)
+5. **Train:** Fine-tune the ResNet50 model on your newly labeled dataset.  
+`python src/train.py`    
 
+6. **Predict:** Perform keypoint detection across all seasonal images and convert pixel lengths to snow depth (cm).  
+`python src/predict.py` 
 
-## 2. Fine-tuning model without GPU
-- Now it's time to train! Make sure to update the `config` file. Then, train (model will automatically default to CPU if no cuda found). We simplified the training step, so that if you use the labeling script no other prep is needed except for updating the paths in the config file.
+7. **Generate Timeseries:** Generate a timeseries plot from the output data.  
+`python src/plot_timeseries.py`
 
-on local or GPU machine: 
-```
-python src/train.py
-```
+### Optional Steps  
+- **Evaluation:** Verify the model's accuracy.  
+`python src/evaluate.py`  
 
+- **Depth Conversion:** Recalculates final snow depths if any measurements or metadata files are updated after predictions are ran (avoids having to run prediction step again).  
+`python src/depth_conversion.py`  
 
-## 3. Predictions
+## Expected Outputs
+Upon successful execution of the full pipeline, you will generate several outputs across the different steps:
+- **pole_metadata.csv**: Generated during the baseline conversion step, storing the pixel-to-centimeter scaling factors for each active pole.  
+- **labels.csv**: Generated by the labeling tool, containing the ground-truth keypoint annotations for your training subset.  
+- **Trained Model Weights**: Generated by the training script (typically saved as a `.pth` file in the models directory), containing the fine-tuned ResNet50 model updated for your specific camera sites.  
+- **results.csv**: The final structured data file from the prediction step, containing the datetime, predicted keypoint coordinates, and calculated snow depth (in cm) for every processed image.
+- **Evaluation Images**: (If evaluation was run) Copies of the images with the predicted top and bottom keypoints visually drawn on the poles to verify accuracy.
+- **Time Series Plots**: Generated by `plot_timeseries.py`, these graphs visualize the seasonal snow depth trends and can overlay continuous weather station sensor data and manual field measurements.
 
-> [!TIP]
-> Start here if you don't want to fine-tune the model, but just want to try the model on your data.
+## Troubleshooting and Known Issues
+- **Pole Shifting/Leaning:** If a pole physically shifts or leans during the season, it seems to break the px-to-cm conversion and result in data discrepancies.
 
-- To test the model on your own sites of interest, run 'predict.py'. The script saves the results as a .csv as well as pictures of the predictions. On a local machine, the script can process about 1.1 image/ second. So, 1000 images would take ~18 min to run. The script contains four arguments to allow the user to customize predictions: 1) model_folder, 2) dir_path, 3) folder_path, and 4) output_path. The script takes the following arguments: 
-    - 'model_path' if the user has retrained the model and would like to point it to the new folder, they can update the path here. If the user leaves this blank, it will automatically use the model developed in the corresponding paper which is saved in this directory. 
-    - "img_dir" is the argument if you would like to predict for a directory of camera folders. It assumes that original images are saved in a nested subfolder from a root folder, and that each camera folder has a unique folder ID that matches the camera ID. For example the directory may be called "data" and then each folder within "data" is "camera1," "camera2," etc, where within each camera folder are the .jpg images. This is the most efficient way to run the code, because you only have to run one line, and the model will make predictions across all your camera folders. 
-    - "img_folder" is similiar to "dir_path" except that it does not assume a nested folder structure. This can be used if all your images are in one folder, or you simply want to run predictions on one folder only. If left blank, it will default to example images. 
-        **Note:** You only need to use dir_path or folder_path not both. 
-    - "metadata" this stores the information for the model to convert to snowdepth (automatically created if use labeling.py)
+## References and Resources
+Breen, C. M. (2024). snowpoles [Source code]. GitHub. https://github.com/catherine-m-breen/snowpoles
 
-- An example for a directory of  from the command line is as follows: 
-on local or GPU machine:
-
-GENERIC: 
-```
-python src/predict.py --model_path [PATH TO CUSTOMIZED MODEL] --img_dir [IMAGE DIRECTORY]  --metadata [POLE METADATA]
-```
-EXAMPLE:
-```
-python src/predict.py --model_path './output1/model.pth' --img_dir './nontrained_data'  --metadata './nontrained_data/pole_metadata.csv'
-
-```
-
-- An example for a single folder from the command line is as follows: 
-on local or GPU machine:
-
-GENERIC: 
-```
-python src/predict.py --model_path [PATH TO CUSTOMIZED MODEL] --img_folder [IMAGE FOLDER]  --metadata [POLE METADATA]
-```
-
-EXAMPLE:
-```
-python src/predict.py --model_path './output1/model.pth' --img_folder './nontrained_data/TLS-A1N'  --metadata './nontrained_data/pole_metadata.csv'
-```
-
-**Note: the script only allows for a img_dir OR a img_folder because of how it uploads the images to local memory. Please use only one argument or the other. If both are provided, it will default to img_dir.
-
-## 4. Snow Depth Extraction (optional)
-
-- Predictions.py (see #3) will automatically convert to snow depth. However, if you find that you need to update some information (metadata, for example), you can run the script post-hoc. The script is called 'depth_conversion.py'.The script contains two arguments to allow the user to customize the predictions path. 
-    - 'predictions_path' the predictions from the model (generated by predictions.py)
-    - 'metadata' the pole_metadata.csv (generatd from labeling.csv)
-
-
-GENERIC: 
-```
-python src/depth_conversion.py --predictions_path [PREDICTIONS CSV] --metadata [POLE METADATA CSV]
-```
-EXAMPLE:
-```
-python src/depth_conversion.py --predictions_path '/predictions/results.csv' --metadata 'example_nontrained_data/pole_metadata.csv'
-```
-
-
-## Other resources
 Breen, C. M., Currier, W. R., Vuyovich, C., Miao, Z., & Prugh, L. R. (2024). Snow Depth Extraction From Time‐Lapse Imagery Using a Keypoint Deep Learning Model. Water Resources Research, 60(7), e2023WR036682. https://doi.org/10.1029/2023WR036682
 
 Breen, C. M., C. Hiemstra, C. M. Vuyovich, and M. Mason. (2022). SnowEx20 Grand Mesa Snow Depth from Snow Pole Time-Lapse Imagery, Version 1 [Data Set]. Boulder, Colorado USA. NASA National Snow and Ice Data Center Distributed Active Archive Center. https://doi.org/10.5067/14EU7OLF051V. Date Accessed 04-13-2023.
