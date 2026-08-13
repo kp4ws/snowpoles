@@ -30,10 +30,11 @@ def get_stake_lengths(csv_path: str):
 def main():
     args = ArgumentParser("Manually label images for training")
 
-    ######## for pole_metdata #######
-    all_camera_rows = []
+    meta_data_path = Path(args.path) / "pole_metadata.csv"
+    df_existing = pd.read_csv(meta_data_path)
 
-    processed_cameras = set()  # Track which cameras we've already processed
+    processed_cameras = set(df_existing['camera_id'].astype(str))  # Track which cameras we've already processed
+
     sites_dir = Path(args.path) / "sites"
     cam_dirs = [x for x in sites_dir.iterdir() if x.is_dir()]
 
@@ -45,7 +46,7 @@ def main():
 
         # Skip if cameraID is not in config
         if not camera_cfg:
-            print(f"{cam_dir} not found in config, skipping")
+            print(f"{camera_id} not found in config, skipping")
             continue
 
         is_enabled = camera_cfg.get("enabled", True)
@@ -53,12 +54,12 @@ def main():
 
         # Skip if camera is not enabled or has no active poles
         if not is_enabled or not active_poles:
-            print(f"{cam_dir} not active, skipping")
+            print(f"{camera_id} not active, skipping")
             continue 
 
         # Skip if we've already processed this camera
         if camera_id in processed_cameras:
-            print(f"{cam_dir} already processed, skipping")
+            print(f"{camera_id} already processed, skipping")
             continue
 
         #Get baseline image for current camera site
@@ -67,7 +68,6 @@ def main():
             print(f"Baseline image missing for {camera_id}. Please run baseline script first.")
             sys.exit(0)
 
-        processed_cameras.add(camera_id)
         img = cv2.imread(str(baseline_file))
         height, width, channel = img.shape
 
@@ -94,14 +94,26 @@ def main():
             loc="left", 
             ma="left"
             )
+
+        #Check if window is still open before input
+        if not plt.fignum_exists(figure.number):
+            print("\nSession closed by user. Saving current progress and exiting.")
+            break
+
         points = plt.ginput(expected_clicks, timeout=0, mouse_pop=2)
+
+        #Check if window is still open during input
+        if not plt.fignum_exists(figure.number):
+            print("\nSession closed by user. Saving current progress and exiting.")
+            break
+        
         plt.close()
 
         if len(points) < expected_clicks:
             print(f"Skipping {camera_id} (Not enough points collected / User skipped)")
             continue
 
-        current_row = {
+        new_row = {
             "camera_id": camera_id,
             "width": width,
             "height": height,
@@ -119,15 +131,15 @@ def main():
                 print(e)
                 print("Consider setting pole as inactive in configuration")
 
-            current_row[f"s{poleId}_pole_length_px"] = full_pole_length_px
-            current_row[f"s{poleId}_pole_length_cm"] = full_pole_length_cm
-            current_row[f"s{poleId}_pixel_cm_conversion"] = conversion
+            new_row[f"s{poleId}_pole_length_px"] = full_pole_length_px
+            new_row[f"s{poleId}_pole_length_cm"] = full_pole_length_cm
+            new_row[f"s{poleId}_pixel_cm_conversion"] = conversion
         
-        all_camera_rows.append(current_row)
-            
-    metadata_df = pd.DataFrame(all_camera_rows)
-    metadata_df.to_csv(f"{args.path}/pole_metadata.csv", index=False)
-    print(f"Success: Metadata saved to {args.path}/pole_metadata.csv")
+
+        df_new_row = pd.DataFrame([new_row])   
+        df_existing = pd.concat([df_existing, df_new_row], ignore_index=True)
+        df_existing.to_csv(meta_data_path, index=False)
+        print(f"Success: Metadata saved to {args.path}/pole_metadata.csv")
 
 if __name__ == "__main__":
     main()

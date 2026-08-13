@@ -22,6 +22,9 @@ from arg_parser import ArgumentParser
 from config import cameras, labeling
 
 def get_subset_to_label(files):
+    #Filter out any baseline images from the file list
+    files = [f for f in files if "baseline" not in str(f).lower()]
+
     target = labeling.get("target_label_count", 25)
     total = len(files)
 
@@ -134,7 +137,19 @@ def main():
             )
             
             plt.tight_layout()
+
+            #Check if window is still open before input
+            if not plt.fignum_exists(figure.number):
+                print("\nSession closed by user. Saving current progress and exiting.")
+                break
+
             points = plt.ginput(expected_clicks, timeout=0, mouse_pop=2)
+
+            #Check if window is still open during input
+            if not plt.fignum_exists(figure.number):
+                print("\nSession closed by user. Saving current progress and exiting.")
+                break
+
             plt.close()
 
             if len(points) < expected_clicks:
