@@ -25,7 +25,7 @@ pip install -r requirements.txt
 ```
 3. Ensure you have **Microsoft Visual C++ Redistributable (vc_redist.x64)** installed (required for PyTorch binaries on Windows). This package can be found here: https://aka.ms/vs/16/release/vc_redist.x64.exe
 
-4. Copy and paste your **camera site image directories** into `CHRL_data/sites/`. Run **rename_and_date_images.py** if images don't follow **"ID_timestamp.jpg"** format.
+4. Create `CHRL_data/raw_sites/` directory and drop your unorganized camera folders in there. It is okay if the raw images are buried in messy subfolders—the renaming script will automatically find them and flatten the structure. Once this directory is created, run `python src/rename_and_date_images.py`. Once the images have been processed, they'll be used throughout the rest of the application and the raw images are no longer needed.    
 
 ## Configuration and Settings
 Before running the pipeline on a new dataset, update the `config.toml` file and adjust the camera configuration accordingly:  
@@ -40,25 +40,22 @@ Optimal keypoint accuracy requires site specific fine-tuning. For each new camer
 **IMPORTANT:** All terminal commands below must be executed from the root directory of the project, NOT from within the `src/` folder.
 
 The general pipeline follows these steps:  
-1. **Populate trail cam images into the data directory:** Move your site image folders into the designated data path and run the following command to ensure filenames are formatted properly.  
-`python src/rename_and_date_images.py`  
-
-2. **Collect baseline images:** Generate baseline reference images for each camera site.  
+1. **Collect baseline images:** Generate baseline reference images for each camera site.  
 `python src/get_baselines.py`  
 
-3. **Collect px to cm conversion ratios:** Calculate the pixel-to-centimeter scale for all active poles using the baseline images.  
+2. **Collect px to cm conversion ratios:** Calculate the pixel-to-centimeter scale for all active poles using the baseline images.  
 `python src/px_cm_conversion.py`  
 
-4. **Label:** Annotate a subset of images per site to create training ground truth.  
+3. **Label:** Annotate a subset of images per site to create training ground truth.  
 `python src/labeling.py`  
 
-5. **Train:** Fine-tune the ResNet50 model on your newly labeled dataset.  
+4. **Train:** Fine-tune the ResNet50 model on your newly labeled dataset.  
 `python src/train.py`    
 
-6. **Predict:** Perform keypoint detection across all seasonal images and convert pixel lengths to snow depth (cm).  
+5. **Predict:** Perform keypoint detection across all seasonal images and convert pixel lengths to snow depth (cm).  
 `python src/predict.py` 
 
-7. **Generate Timeseries:** Generate a timeseries plot from the output data.  
+6. **Generate Timeseries:** Generate a timeseries plot from the output data.  
 `python src/plot_timeseries.py`
 
 ### Optional Steps  

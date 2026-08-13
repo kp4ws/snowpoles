@@ -11,6 +11,7 @@ from datetime import datetime
 from PIL import Image
 from PIL.ExifTags import TAGS
 import shutil
+import sys
 
 def get_image_datetime_exif(image_path, exif_field="DateTime") -> datetime:
     """
@@ -61,9 +62,13 @@ def get_image_datetime_exif(image_path, exif_field="DateTime") -> datetime:
     return detected_datetime
 
 #Extract data from trail cam images
-#TODO Need to update directory structure
-source_dir = Path("CHRL_data/trail_cameras")
-destination_dir = Path("CHRL_data/trail_cameras_processed")
+source_dir = Path("CHRL_data/raw_sites")
+
+if not source_dir.exists():
+    print(f"ERROR: {source_dir} does not exist. Please create this directory and place all unprocessed trail camera images into it. System will now exit.")
+    sys.exit(1)
+
+destination_dir = Path("CHRL_data/sites")
 
 #If destination directory doesn't already exist, create it
 destination_dir.mkdir(exist_ok=True)
