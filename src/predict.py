@@ -31,20 +31,22 @@ from tqdm import tqdm
 # Import all libraries
 from model import snowPoleResNet50
 import torch
-from config import cameras
+from config import cameras, global_max_poles
 
 from arg_parser import ArgumentParser
 
-def vis_predicted_keypoints(file, image, keypoints, color=(0, 255, 0), diameter=15, args=None):
+def vis_predicted_keypoints(file, image, keypoints, color=(0, 255, 0), diameter=15, active_poles=3, args=None):
     #file = file.split(".")[0]
     file = Path(file).stem  
     output_keypoint = keypoints.reshape(-1, 2)
     plt.imshow(image)
-    for p in range(output_keypoint.shape[0]):
-        if p == 0: 
-            plt.plot(output_keypoint[p, 0], output_keypoint[p, 1], 'r.') ## top
-        else:
-            plt.plot(output_keypoint[p, 0], output_keypoint[p, 1], 'r.') ## bottom
+
+    num_active_points = active_poles * 2
+    for p in range(num_active_points):
+        if output_keypoint[p, 0] == -999.0 or output_keypoint[p, 1] == -999.0:
+            continue
+
+        plt.plot(output_keypoint[p, 0], output_keypoint[p, 1], 'r.')
 
     plt.savefig(f"{args.models_output}/predictions/pred_{file}.png")
     plt.close()
@@ -52,10 +54,8 @@ def vis_predicted_keypoints(file, image, keypoints, color=(0, 255, 0), diameter=
 def load_model(args):
     labels_path = Path(args.path) / "labels.csv"
     df_labels = pd.read_csv(labels_path)
-    pole_x1_cols = [col for col in df_labels.columns if col.endswith("_x1")]
-    num_poles = len(pole_x1_cols)
-    num_keypoints = 4 * num_poles
 
+    num_keypoints = 4 * global_max_poles
     model = snowPoleResNet50(pretrained=False, requires_grad=False, num_keypoints=num_keypoints).to(args.device)
     # load the model checkpoint
     #torch.serialization.add_safe_globals([torch.nn.modules.loss.SmoothL1Loss])
@@ -173,8 +173,14 @@ def predict(model, args, device):
                         predictions_data[key] = [None] * current_row_idx
                     predictions_data[key].append(val)
 
+            #Ensures all dictionary arrays are the same size
+            target_length = current_row_idx + 1
+            for key in predictions_data.keys():
+                if len(predictions_data[key]) < target_length:
+                    predictions_data[key].append(None)
+
             if i % 100 == 0: 
-                vis_predicted_keypoints(filename, image, pred_keypoint, args=args) 
+                vis_predicted_keypoints(filename, image, pred_keypoint, active_poles, args=args) 
 
             if camera_cfg.get("upside_down", False):
                 x1_pred = w - x1_pred

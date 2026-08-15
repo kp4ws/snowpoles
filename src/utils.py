@@ -29,6 +29,10 @@ def valid_keypoints_plot(args, image, outputs, orig_keypoints, epoch):
     output_keypoint = output_keypoint.reshape(-1, 2)
     orig_keypoint = orig_keypoint.reshape(-1, 2)
     for p in range(output_keypoint.shape[0]):
+        #filter out -999 padding
+        if orig_keypoint[p, 0] == -999.0 or orig_keypoint[p, 1] == -999.0:
+            continue
+
         if p == 0: 
             plt.plot(output_keypoint[p, 0], output_keypoint[p, 1], 'r.') ## top
             plt.plot(orig_keypoint[p, 0], orig_keypoint[p, 1], 'b.')
@@ -56,9 +60,15 @@ def dataset_keypoints_plot(data):
         img = np.transpose(img, (1, 2, 0))
         plt.subplot(3, 3, i+1)
         plt.imshow(img)
-        keypoints = sample['keypoints']
+
+        keypoints = sample['keypoints'].reshape(-1, 2)
+
         for j in range(len(keypoints)):
+            if keypoints[j, 0] == -999.0 or keypoints[j, 1] == -999.0:
+                continue
+
             plt.plot(keypoints[j, 0], keypoints[j, 1], 'b.')
+
     plt.show()
     plt.close()
 
@@ -83,9 +93,14 @@ def eval_keypoints_plot(args, file, image, outputs, eval, orig_keypoints):
     
     output_keypoint = output_keypoint.reshape(-1, 2)
     orig_keypoints = orig_keypoints.reshape(-1, 2)
+
     for p in range(output_keypoint.shape[0]):
+        if orig_keypoints[p, 0] == -999.0 or orig_keypoints[p, 1] == -999.0:
+            continue
+
         plt.plot(orig_keypoints[p, 0], orig_keypoints[p, 1], 'b.',  markersize=20)
         plt.plot(output_keypoint[p, 0], output_keypoint[p, 1], 'r.', markersize=20)
+
     plt.savefig(f"{args.models_output}/{eval}/{eval}_{file}.png")
     plt.close()
 
@@ -93,6 +108,9 @@ def vis_keypoints(image, keypoints, color=(0,255,0), diameter=15):
     image = image.copy()
 
     for (x, y) in keypoints:
+        if x == -999.0 or y == -999.0:
+            continue
+
         print(x, y)
         cv2.circle(image, (int(x), int(y)), diameter, (0, 255, 0), -1)
 
@@ -112,71 +130,6 @@ def vis_predicted_keypoints(args, file, image, keypoints, color=(0,255,0), diame
             plt.plot(output_keypoint[p, 0], output_keypoint[p, 1], 'r.') ## bottom
     plt.savefig(f"{args.output_path}/predictions/image_{file}.png")
     plt.close()
-   
-
-# def camres(Camera):    
-#     df = pd.read_csv(f'{config.native_res_path}')
-#     try: 
-#         orig_w = df.loc[df['camID'] == Camera, 'orig_w'].iloc[0]
-#         orig_h = df.loc[df['camID'] == Camera, 'orig_h'].iloc[0]
-#     except: 
-#         print('error')
-#     return orig_w, orig_h 
-
-
-# def conversionDic(Camera):
-#     conversion_table = pd.read_csv(f'{config.snowfreetbl_path}')
-#     convDic = dict(zip(conversion_table['camera'], conversion_table['conversion']))
-#     conversion = convDic[Camera]
-
-#     stake_cm_dic = dict(zip(conversion_table['camera'], conversion_table['snow_free_cm'])) ## snowfree stake
-#     snowfreestake_cm = stake_cm_dic[Camera]
-
-#     return conversion, snowfreestake_cm
-
-# def outputs_in_cm(Camera, filename, x1s_pred, y1s_pred, x2s_pred, y2s_pred):
-#     '''
-#     This function converts the length in pixels to length in cm for each output
-#     '''
-#     orig_w, orig_h = camres(Camera)
-#     conversion, snowfreestake_cm = conversionDic(Camera)
-
-#     keypoints = [x1s_pred, y1s_pred, x2s_pred, y2s_pred]
-#     keypoints = np.array(keypoints, dtype='float32')
-#     keypoints = keypoints.reshape(-1, 2)
-#     keypoints = keypoints * [orig_w / 224, orig_h / 224] 
-    
-#     proj_pix_length = math.dist(keypoints[0], keypoints[1])
-#     proj_cm_length = proj_pix_length * float(conversion) 
-#     snow_depth = snowfreestake_cm - float(proj_cm_length)
-#     x1_proj, y1_proj, x2_proj, y2_proj = keypoints[0][0], keypoints[0][1], keypoints[1][0], keypoints[1][1]
-  
-#     cmresults = {'Camera':Camera,'filename':filename,'x1_proj':x1_proj,'y1_proj':y1_proj,
-#                  'x2_proj':x2_proj,'y2_proj':y2_proj,'proj_pixel_length':proj_pix_length,
-#                  'proj_cm_length':proj_cm_length,'snow_depth':snow_depth}
-
-#     return cmresults 
-
-
-# def datetimeExtrac(filename):
-#     datetimeinfo = pd.read_csv(f'{config.datetime_info}')
-#     fileDatetime = datetimeinfo.loc[datetimeinfo['filenames'] == filename, 'datetimes'].iloc[0]
-#     return fileDatetime 
-
-# def diffcm(Camera, filename, automated_snow_depth):
-
-#     fileDatetime = datetimeExtrac(filename)
-#     actual_snow_depth = pd.read_csv(f'{config.manual_labels_path}') ## add CH and OK poles using conversions
-
-#     try: 
-#         sd = float(actual_snow_depth[(actual_snow_depth['camera']==Camera) & (actual_snow_depth['dates']==fileDatetime)]['snowDepth'])
-#         manual_snowdepth = sd
-#         difference = manual_snowdepth - automated_snow_depth
-#     except:
-#         manual_snowdepth = 'na'
-#         difference = 'na'
-
-#     return manual_snowdepth, difference
 
 def MAPE(Y_actual,Y_Predicted):
     mape = ((np.abs(Y_actual - Y_Predicted)/Y_actual)*100)
@@ -238,3 +191,26 @@ def enable_scroll_zoom_and_pan(ax, base_scale=1.2):
     ax.figure.canvas.mpl_connect('button_press_event', press)
     ax.figure.canvas.mpl_connect('button_release_event', release)
     ax.figure.canvas.mpl_connect('motion_notify_event', motion)
+
+def apply_filter(image):
+    # width, height, __ = image.shape
+    # for y in range(height):
+    #     for x in range(width):
+    #         pixel = list(colorsys.rgb_to_hsv(*image[x, y]))
+    #         if (pixel[0] < 0.833):
+    #             image[x, y] = (0, 0, 0)
+    #             continue
+    #         pixel[1] = 1
+    #         pixel[2] = 255
+    #         rgb = colorsys.hsv_to_rgb(*pixel)
+    #         image[x, y] = (round(rgb[0]), round(rgb[1]), round(rgb[2]))
+    image_rgb = image[:, :, ::-1]
+    image_hsv = cv2.cvtColor(image_rgb, cv2.COLOR_RGB2HSV)
+    mask = image_hsv[:, :, 0] < 149
+    image_rgb[mask] = [0,0,0]
+    image_hsv[~mask, 1] = 255
+    image_hsv[~mask, 2] = 255
+    valid_pixels = cv2.cvtColor(image_hsv, cv2.COLOR_HSV2RGB)
+    image_rgb[~mask] = valid_pixels[~mask]
+    #print("filtered applied!")
+    return image_rgb[:, :, ::-1]

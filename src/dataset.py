@@ -12,90 +12,19 @@ Water Resources Research, 60(7), e2023WR036682. https://doi.org/10.1029/2023WR03
 
 '''
 import torch
+import torch.nn.functional as F
 import cv2
-import pandas as pd
 import numpy as np
 import utils
-from torch.utils.data import Dataset, DataLoader
+from torch.utils.data import Dataset
 import torch
 import albumentations as A ### better for keypoint augmentations, pip install albumentations
-from sklearn.model_selection import train_test_split
-import os
-from pathlib import Path
-from config import cameras, paths, training
+from config import cameras, paths, training, global_max_poles
 
-def apply_filter(image):
-    # width, height, __ = image.shape
-    # for y in range(height):
-    #     for x in range(width):
-    #         pixel = list(colorsys.rgb_to_hsv(*image[x, y]))
-    #         if (pixel[0] < 0.833):
-    #             image[x, y] = (0, 0, 0)
-    #             continue
-    #         pixel[1] = 1
-    #         pixel[2] = 255
-    #         rgb = colorsys.hsv_to_rgb(*pixel)
-    #         image[x, y] = (round(rgb[0]), round(rgb[1]), round(rgb[2]))
-    image_rgb = image[:, :, ::-1]
-    image_hsv = cv2.cvtColor(image_rgb, cv2.COLOR_RGB2HSV)
-    mask = image_hsv[:, :, 0] < 149
-    image_rgb[mask] = [0,0,0]
-    image_hsv[~mask, 1] = 255
-    image_hsv[~mask, 2] = 255
-    valid_pixels = cv2.cvtColor(image_hsv, cv2.COLOR_HSV2RGB)
-    image_rgb[~mask] = valid_pixels[~mask]
-    #print("filtered applied!")
-    return image_rgb[:, :, ::-1]
-
-    
-
-# Define a function to sample every third photo
-## Only used for experiments 
-def sample_every_x(group, x):
-    indices = np.arange(len(group[1]))
-    every_x = len(group[1])//x
-    selected_indices = indices[2::every_x]  
-    return group[1].iloc[selected_indices]
-
-def train_test_split(csv_path, image_path):
-
-    df_data = pd.read_csv(csv_path)
-    print(f'all rows in df_data {len(df_data.index)}')
-
-    ## check to make sure we only use images that exist
-    all_images = list(Path(image_path).rglob("*.JPG"))
-
-    global parents
-    parents = {}
-    for i in all_images:
-        parents[i.name] = str(i)
-    existing_filenames = [img.name for img in all_images]
-    
-    #Filter df_data to ensure we only have existing filenames
-    df_existing = df_data[df_data["filename"].isin(existing_filenames).reset_index(drop=True)]
-
-    #Perform 80/20 split on training and validation data
-    training_samples = df_existing.sample(frac=0.8, random_state=100) # same shuffle everytime
-    validation_samples = df_existing[~df_existing.index.isin(training_samples.index)]
-
-    #Reset indices
-    training_samples = training_samples.reset_index(drop=True)
-    validation_samples = validation_samples.reset_index(drop=True)
-    
-    # save labels to output folder
-    if not os.path.exists(f"{paths.get('models_output')}"):
-        os.makedirs(f"{paths.get('models_output')}", exist_ok=True)
-    training_samples.to_csv(f"{paths.get('models_output')}/training_samples.csv")
-    validation_samples.to_csv(f"{paths.get('models_output')}/validation_samples.csv")
-
-    print(f'# of examples we will now train on {len(training_samples)}, val on {len(validation_samples)}')
-    return training_samples, validation_samples
-
-class snowPoleDataset(Dataset):
-
-    def __init__(self, samples, path, aug): # split='train'):
+class SnowPoleDataset(Dataset):
+    def __init__(self, samples, parents_dict, aug=False): # split='train'):
         self.data = samples
-        self.path = path
+        self.parents = parents_dict
         self.resize = 224
 
         if aug == False: 
@@ -129,7 +58,7 @@ class snowPoleDataset(Dataset):
         active_poles = camera_cfg.get("active_poles", [])
 
         #Read and prepare image
-        image = cv2.imread(parents[self.data.iloc[index]["filename"]])
+        image = cv2.imread(self.parents[self.data.iloc[index]["filename"]])
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 
         if camera_cfg.get("upside_down", False):
@@ -144,7 +73,7 @@ class snowPoleDataset(Dataset):
 
         #Apply HSV snow filter (if turned on in config)
         if training.get('filter'): 
-            image = apply_filter(image)
+            image = utils.apply_filter(image)
             if index % 100 == 0: 
                 cv2.imwrite(f"{paths.get('models_output')}/filtered_{filename}", image)
 
@@ -178,50 +107,15 @@ class snowPoleDataset(Dataset):
         if len(keypoints) != expected_points:
             utils.vis_keypoints(transformed['image'], transformed['keypoints'])
 
+        #padding logic and flatten back to vector of 12 values for output layer
+        keypoints_tensor = torch.tensor(keypoints, dtype=torch.float).view(-1)
+        max_tensor_size = global_max_poles * 4
+        padding_length = max_tensor_size - keypoints_tensor.shape[0]
+        if padding_length > 0:
+            keypoints_tensor = F.pad(keypoints_tensor, (0, padding_length), value = -999)
+
         return {
             'image': torch.tensor(image, dtype=torch.float),
-            'keypoints': torch.tensor(keypoints, dtype=torch.float).view(-1), #Flatten back to vector of 12 values for output layer
+            'keypoints': keypoints_tensor,
             'filename': filename
         }
-
-print("Preparing training and validation samples...")
-# get the training and validation data samples
-training_samples, validation_samples = train_test_split(
-    f"{paths.get('labels')}", paths.get('data_directory')
-)
-
-
-# initialize the dataset - `snowPoleDataset()`
-train_data = snowPoleDataset(
-    training_samples,
-    f"{paths.get('data_directory')}",
-    aug=training.get('aug'),
-)  ## we want all folders
-
-validation_data = snowPoleDataset(
-    validation_samples, 
-    f"{paths.get('input_images')}", 
-    aug=False
-)  # we always want the transform to be the normal transform
-
-print("Preparing data loaders")
-# # prepare data loaders
-train_loader = DataLoader(
-    train_data, 
-    batch_size=training.get('batch_size'), 
-    shuffle=True, 
-    num_workers=0
-)
-validation_loader = DataLoader(
-    validation_data,
-    batch_size=training.get('batch_size'),
-    shuffle=False,
-    num_workers=0,
-)
-
-print(f"Training sample instances: {len(train_data)}")
-print(f"Validation sample instances: {len(validation_data)}")
-
-if training.get("show_dataset_plot"):
-    utils.dataset_keypoints_plot(train_data)
-    utils.dataset_keypoints_plot(validation_data)

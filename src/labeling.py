@@ -50,6 +50,7 @@ def main():
 
     ## load labels.csv
     labels_path = Path(args.path) / "labels.csv"
+    df_existing = None
     CORE_COLUMNS = ["filename", "camera_id", "datetime"]
 
     #Check if labels file exists.

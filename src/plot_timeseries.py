@@ -52,10 +52,48 @@ def main():
                     label=f"Pole {pole_id}"
                 )
 
+
+        if cam == "CTRL1":
+            #TODO: should this be in config file?
+            station_data_path = "CHRL_data/backup/CTRL1_merged.csv"
+            if not os.path.exists(station_data_path):
+                print(f"Warning: station data path doesn't exist")
+
+            df_station = pd.read_csv(station_data_path, parse_dates=['datetime'])
+
+            # Set the index, resample to 1-Hour intervals (filling missing hours with NaN), and reset
+            # df_station = df_station.set_index('datetime').resample('1H').mean().reset_index()
+
+            df_discrete = df_station.dropna(subset=['field_snow_depth_m']).copy()
+            df_discrete['field_snow_depth_cm'] = df_discrete['field_snow_depth_m'] * 100
+
+            plt.scatter(
+                df_discrete['datetime'],
+                df_discrete['field_snow_depth_cm'],
+                color='black',
+                marker='X',
+                s=75,
+                label="Field Measurements",
+                zorder=5
+            )
+
+            plt.plot(
+                df_station['datetime'],
+                df_station['snow_depth_m'] * 100,
+                color='purple',
+                linestyle='--',
+                alpha=0.6,
+                label="Station Snow Depth"
+            )
+
         
         plt.title(f"Snow Depth Time Series: Camera {cam}", fontsize=14, fontweight='bold')
         plt.xlabel("Date", fontsize=12)
         plt.ylabel("Snow Depth (cm)", fontsize=12)
+
+        min_date = cam_df["datetime"].min() - pd.Timedelta(days=2)
+        max_date = cam_df["datetime"].max() + pd.Timedelta(days=2)
+        plt.xlim(min_date, max_date)
 
         #Format x-axis to show readable dates
         plt.gca().xaxis.set_major_formatter(mdates.DateFormatter('%b %d, %Y'))

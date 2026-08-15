@@ -31,7 +31,21 @@ def main():
     args = ArgumentParser("Manually label images for training")
 
     meta_data_path = Path(args.path) / "pole_metadata.csv"
-    df_existing = pd.read_csv(meta_data_path)
+    df_existing = None
+    CORE_COLUMNS = ["camera_id", "width", "height"]
+
+    #Check if metadata file exists
+    if meta_data_path.exists():
+        try:
+            df_existing = pd.read_csv(meta_data_path, skip_blank_lines=True)
+        except Exception:
+            print("pole_metadata.csv is corrupted or does not exist, creating...")
+            df_existing = pd.DataFrame(columns=CORE_COLUMNS)
+            df_existing.to_csv(meta_data_path, index=False)
+    else:
+        print("pole_metadata.csv is corrupted or does not exist, creating...")
+        df_existing = pd.DataFrame(columns=CORE_COLUMNS)
+        df_existing.to_csv(meta_data_path, index=False)
 
     processed_cameras = set(df_existing['camera_id'].astype(str))  # Track which cameras we've already processed
 

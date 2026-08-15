@@ -16,3 +16,12 @@ paths = config.get("paths", {})
 cameras = config.get("cameras", {})
 labeling = config.get("labeling", {})
 training = config.get("training", {})
+
+#Determine the max number of poles of the trail cam data
+global_max_poles = 0
+for cam_name, cam_settings in cameras.items():
+    if cam_settings.get("enabled", False):
+        active_pole_count = len(cam_settings.get("active_poles", []))
+
+        if active_pole_count > global_max_poles:
+            global_max_poles = active_pole_count
