@@ -25,7 +25,7 @@ pip install -r requirements.txt
 ```
 3. Ensure you have **Microsoft Visual C++ Redistributable (vc_redist.x64)** installed (required for PyTorch binaries on Windows). This package can be found here: https://aka.ms/vs/16/release/vc_redist.x64.exe
 
-4. Create `CHRL_data/raw_sites/` directory and drop your unorganized camera folders in there. It is okay if the raw images are buried in messy subfolders—the renaming script will automatically find them and flatten the structure. Once this directory is created, run `python src/rename_and_date_images.py`. Once the images have been processed, they'll be used throughout the rest of the application and the raw images are no longer needed.    
+4. Create `CHRL_data/raw_sites/` directory and drop your unorganized camera folders in there. **It is okay if the raw images are contained in subfolders, the renaming script will automatically find them and flatten the structure.** Once this directory is created, run `python src/rename_and_date_images.py`. Once the images have been processed, they'll be used throughout the rest of the application and the raw images are no longer needed.    
 
 ## Configuration and Settings
 Before running the pipeline on a new dataset, update the `config.toml` file and adjust the camera configuration accordingly:  
@@ -35,7 +35,7 @@ Before running the pipeline on a new dataset, update the `config.toml` file and 
 - `upside_down`: Set to true if the camera was mounted upside down.
 
 ## The Processing Pipeline
-Optimal keypoint accuracy requires site specific fine-tuning. For each new camera site or seasonal redeployment, label a small baseline subset of images (about 25 per site) to fine-tune the model for the season.
+For each new camera site or seasonal redeployment, label a small baseline subset of images (about 25 per site) to fine-tune the model for the season.
 
 **IMPORTANT:** All terminal commands below must be executed from the root directory of the project, NOT from within the `src/` folder.
 
@@ -64,6 +64,9 @@ The general pipeline follows these steps:
 
 - **Depth Conversion:** Recalculates final snow depths if any measurements or metadata files are updated after predictions are ran (avoids having to run prediction step again).  
 `python src/depth_conversion.py`  
+
+- **Weather Station Data Comparison:** Compares the target camera site against ground truth data from the specified weather station. Note, both the target camera and weather station names are hardcoded in the script.  
+`python src/compare_station_data.py`
 
 ## Expected Outputs
 Upon successful execution of the full pipeline, you will generate several outputs across the different steps:
