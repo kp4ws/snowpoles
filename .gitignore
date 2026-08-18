@@ -18,6 +18,7 @@ interns_2025
 *.pt
 *.pth
 *.ckpt
+*timeseries*.png
 .vscode/
 .idea/
 CHRL_data/backup/*

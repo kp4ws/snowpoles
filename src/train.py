@@ -17,6 +17,8 @@ tensorboard --logdir=runs
 
 # Import startup libraries
 import os
+import sys
+print("Initializing environment and loading ML libraries (this may take a few seconds)...", flush=True)
 
 # Import all libraries
 import torch
@@ -40,6 +42,7 @@ from arg_parser import ArgumentParser
 
 def load_model(args):
     num_keypoints = 4 * global_max_poles
+    #TODO: Determine if requires_grad should be true or not
     model = snowPoleResNet50(pretrained=True, requires_grad=True, num_keypoints=num_keypoints).to(args.device)
     checkpoint = torch.load(args.model_path, map_location=torch.device(args.device), weights_only=False)
     state_dict = checkpoint["model_state_dict"]

@@ -29,7 +29,7 @@ class SnowPoleDataset(Dataset):
 
         if aug == False: 
             self.transform = A.Compose([
-                A.Resize(224, 224),
+                A.Resize(self.resize, self.resize),
                 ], keypoint_params=A.KeypointParams(format='xy', remove_invisible=False))
         else: 
             self.transform = A.Compose([
@@ -40,7 +40,7 @@ class SnowPoleDataset(Dataset):
                     A.RandomBrightnessContrast(p=0.5),
                     A.ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2, hue=0.2, always_apply=False, p=0.5),
                     A.ToGray(p=0.5)], p = 0.5),
-                A.Resize(224, 224),
+                A.Resize(self.resize, self.resize),
                 ], keypoint_params=A.KeypointParams(format='xy', remove_invisible=False))
 
     def __len__(self):
@@ -66,7 +66,7 @@ class SnowPoleDataset(Dataset):
         
         orig_h, orig_w, channel = image.shape
 
-        #Scale pixel values to [0, 1] and resize to 224x224
+        #Scale pixel values to [0, 1] and resize to target resolution
         image = image / 255.0
         # resize the image into `resize` defined above
         image = cv2.resize(image, (self.resize, self.resize))
@@ -91,7 +91,7 @@ class SnowPoleDataset(Dataset):
         # #Reshape from a flat 12 element array to (6, 2) matrix for Albumentations
         keypoints = keypoints.reshape(-1, 2)
 
-        #Scale coordinates to match new 224x224 canvas dimensions
+        #Scale coordinates to match new canvas dimensions
         keypoints = keypoints * [self.resize / orig_w, self.resize / orig_h]
 
         #Pass image and 6 keypoints to albumentations

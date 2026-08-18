@@ -139,6 +139,7 @@ def predict(model, args, device):
             for j, poleId in enumerate(active_poles):
                 base = 4*j
 
+                # Scale predicted coordinates from the 224x224 canvas back up to the original image dimensions
                 x1_pred = pred_keypoint[base + 0] * (w / 224)
                 y1_pred = pred_keypoint[base + 1] * (h / 224)
                 x2_pred = pred_keypoint[base + 2] * (w / 224)
@@ -161,6 +162,12 @@ def predict(model, args, device):
                     # Fallback default values if metadata lookup or lookup row fails
                     full_length_pole_cm, pixel_cm_conversion, snow_depth = 0, 0, 0
                 
+                if camera_cfg.get("upside_down", False):
+                    x1_pred = w - x1_pred
+                    y1_pred = h - y1_pred
+                    x2_pred = w - x2_pred
+                    y2_pred = h - y2_pred
+
                 for key, val in [
                     (f"s{poleId}_x1_pred", x1_pred),
                     (f"s{poleId}_y1_pred", y1_pred),
@@ -181,12 +188,6 @@ def predict(model, args, device):
 
             if i % 100 == 0: 
                 vis_predicted_keypoints(filename, image, pred_keypoint, active_poles, args=args) 
-
-            if camera_cfg.get("upside_down", False):
-                x1_pred = w - x1_pred
-                y1_pred = h - y1_pred
-                x2_pred = w - x2_pred
-                y2_pred = h - y2_pred
             
     results = pd.DataFrame(predictions_data)
     results.to_csv(f"{args.models_output}/predictions/results.csv")

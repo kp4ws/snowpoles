@@ -19,7 +19,7 @@ import numpy as np
 from model import snowPoleResNet50
 import utils
 import pandas as pd
-from dataset import train_data, validation_data
+from dataset import SnowPoleDataset
 from tqdm import tqdm
 from scipy.spatial import distance
 import os
@@ -196,7 +196,7 @@ def predict(model, data, eval='eval'):
             all_values = results[metric_cols].to_numpy().flatten()
 
             #Remove any None or Nan
-            all_values = all_values[all_values != None]
+            all_values = all_values[pd.notnull(all_values)]
             all_values = all_values[~np.isnan(all_values.astype(float))]
 
             mean_val = np.mean(all_values)
@@ -222,6 +222,21 @@ def predict(model, data, eval='eval'):
 
 def main():
     model = load_model()
+    
+    from config import paths
+    from pathlib import Path
+    import pandas as pd
+    
+    all_images = list(Path(paths.get('data_directory')).rglob("*.JPG"))
+    parents_dict = {i.name: str(i) for i in all_images}
+    validation_samples = pd.read_csv(f"{args.models_output}/validation_samples.csv")
+    
+    validation_data = SnowPoleDataset(
+        validation_samples, 
+        parents_dict, 
+        aug=False
+    )
+
     print('results on valid data\n')
     outputs = predict(model, validation_data)
 
