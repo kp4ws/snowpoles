@@ -23,6 +23,4 @@ interns_2025
 .idea/
 CHRL_data/backup/*
 CHRL_data/sites/*
-CHRL_data/labels.csv
-CHRL_data/pole_metadata.csv
 internal/
