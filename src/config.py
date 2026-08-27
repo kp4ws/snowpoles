@@ -16,6 +16,7 @@ paths = config.get("paths", {})
 cameras = config.get("cameras", {})
 labeling = config.get("labeling", {})
 training = config.get("training", {})
+timeseries = config.get("timeseries", {})
 
 #Determine the max number of poles of the trail cam data
 global_max_poles = 0

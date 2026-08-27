@@ -12,6 +12,7 @@ import matplotlib.dates as mdates
 import os
 from pathlib import Path
 from arg_parser import ArgumentParser
+from config import timeseries
 
 def main():
     args = ArgumentParser(description="Plot snow depth time series from results.csv")
@@ -29,29 +30,43 @@ def main():
     if not depth_cols:
         print("Error: no snow depth columns found in the CSV")
         return
-    
+
+    single_average_mode = timeseries.get("single_average_mode", False)
     cameras = df["camera_id"].unique()
 
     for cam in cameras:
-        cam_df = df[df["camera_id"] == cam]
-
+        cam_df = df[df["camera_id"] == cam].copy()
         plt.figure(figsize=(12, 6))
 
-        #plot a line for each active pole at the current camera site
-        for col in depth_cols:
-            pole_data = cam_df[["datetime", col]].dropna()
+        if single_average_mode:
+            cam_df['site_avg_snow_depth'] = cam_df[depth_cols].mean(axis=1)
+            avg_data = cam_df.dropna(subset=['site_avg_snow_depth'])
 
-            if not pole_data.empty:
-                pole_id = col.split("_")[0].upper()
+            if not avg_data.empty:
                 plt.plot(
-                    pole_data["datetime"],
-                    pole_data[col],
-                    marker="o", #TODO dots might be too big
-                    linestyle="-",
+                    avg_data['datetime'],
+                    avg_data['site_avg_snow_depth'],
+                    marker='o',
+                    linestyle='-',
                     markersize=4,
-                    label=f"Pole {pole_id}"
+                    color="blue",
+                    label="Site Average Depth"
                 )
+        else:
+            #plot a line for each active pole at the current camera site
+            for col in depth_cols:
+                pole_data = cam_df[["datetime", col]].dropna()
 
+                if not pole_data.empty:
+                    pole_id = col.split("_")[0].upper()
+                    plt.plot(
+                        pole_data["datetime"],
+                        pole_data[col],
+                        marker="o", #TODO dots might be too big
+                        linestyle="-",
+                        markersize=4,
+                        label=f"Pole {pole_id}"
+                    )
 
         if cam == "CTRL1":
             #TODO: should this be in config file?
@@ -85,7 +100,6 @@ def main():
                 alpha=0.6,
                 label="Station Snow Depth"
             )
-
         
         plt.title(f"Snow Depth Time Series: Camera {cam}", fontsize=14, fontweight='bold')
         plt.xlabel("Date", fontsize=12)
