@@ -11,20 +11,19 @@ example command line to run:
 python src/evaluate.py
 
 '''
-
-# Import startup libraries
 import os
-import torch
 import numpy as np
-from model import snowPoleResNet50
 import utils
 import pandas as pd
-from dataset import SnowPoleDataset
 from tqdm import tqdm
 from scipy.spatial import distance
 import os
 from arg_parser import ArgumentParser
 from config import cameras, global_max_poles
+print("Initializing environment and loading ML libraries (this may take a few seconds)...", flush=True)
+from model import snowPoleResNet50
+from dataset import SnowPoleDataset
+import torch
 
 # Argument parser
 args = ArgumentParser("Evaluate model on the train/val images")
@@ -180,50 +179,51 @@ def predict(model, data, eval='eval'):
     results = pd.DataFrame(evaluation_data)
     results.to_csv(f"{args.models_output}/{eval}/indiv_img_eval_results.csv")
 
+    metric_substrings = {
+        "Top Pixel Error": "_top_pixel_error",
+        "Bottom Pixel Error": "_bottom_pixel_error",
+        "Mean Average Percent Error (MAPE)": "_mape",
+        "Difference in cm": "_difference_cm",
+        "Difference in MAPE": "_mape_sd",
+    }
+
+    stats_data = {
+        "Site": [],
+        "Pole": [],
+        "Metric": [],
+        "Mean": [],
+        "Standard_Deviation": [],
+    }
+
     for camera_id, group_df in results.groupby('camera'):
-        metric_substrings = {
-            "Top Pixel Error": "_top_pixel_error",
-            "Bottom Pixel Error": "_bottom_pixel_error",
-            "Mean Average Percent Error (MAPE)": "_mape",
-            "Difference in cm": "_difference_cm",
-            "Difference in MAPE": "_mape_sd",
-        }
-
-        stats_data = {"Metric": [], "Mean": [], "Standard_Deviation": []}
-
-        print("#### Overall average\n")
+        # print("#### Overall average\n")
+        print(f'Processing metrics for {camera_id}')
 
         for metric_label, substring in metric_substrings.items():
-            #Find all columns in results containing substring
-            metric_cols = [col for col in results.columns if col.endswith(substring)]
+            #Find all columns in group_df containing substring
+            metric_cols = [col for col in group_df.columns if col.endswith(substring)]
 
             for col in metric_cols:
                 pole_prefix = col.split('_')[0].upper()
-                specific_label = f"{pole_prefix} {metric_label}"
-                all_values = results[col].to_numpy()
 
+                all_values = group_df[col].to_numpy()
                 #Remove any None or Nan
                 all_values = all_values[pd.notnull(all_values)]
                 all_values = all_values[~np.isnan(all_values.astype(float))]
 
                 if len(all_values) > 0:
-                    mean_val = np.mean(all_values)
-                    std_val = np.std(all_values)
+                    mean_val = round(np.mean(all_values), 3)
+                    std_val = round(np.std(all_values), 3)
 
-                    print(f"{specific_label}")
-                    print(f"{mean_val} +/- {std_val} \n")
-
-                    stats_data['Metric'].append(specific_label)
+                    stats_data['Site'].append(camera_id)
+                    stats_data['Pole'].append(pole_prefix)
+                    stats_data['Metric'].append(metric_label)
                     stats_data['Mean'].append(mean_val)
                     stats_data['Standard_Deviation'].append(std_val)
-                else:
-                    print(f"Warning: no data columns found matching suffix {substring}\n")
-            
-        print("\n")
 
-        # Create DataFrame and save to CSV
-        df = pd.DataFrame(stats_data)
-        df.to_csv(f"{args.models_output}/{eval}/overall_statistics.csv", index=False)
+    # Create DataFrame and save to CSV
+    df = pd.DataFrame(stats_data)
+    df.to_csv(f"{args.models_output}/{eval}/overall_statistics.csv", index=False)
 
     return results
 
@@ -246,6 +246,8 @@ def main():
 
     print('results on valid data\n')
     outputs = predict(model, validation_data)
+
+    print("Evaluation complete, results saved.")
 
 if __name__ == '__main__':
     main()
