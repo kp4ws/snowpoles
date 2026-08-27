@@ -5,8 +5,8 @@ from sklearn.metrics import r2_score, mean_absolute_error, root_mean_squared_err
 from scipy.stats import linregress
 
 def main():
-    results_path = ""
-    station_path = ""
+    results_path = "models/output/predictions/results.csv"
+    station_path = "CHRL_data/backup/CC1_merged.csv"
 
     try:
         results_df = pd.read_csv(results_path)
@@ -22,6 +22,14 @@ def main():
     if camera_df.empty:
         print(f"No prediction data found for camera {target_camera}")
         return
+
+    #Align timestamps of each dataframe
+    camera_df["datetime"] = pd.to_datetime(camera_df["datetime"], errors="coerce")
+    station_df["datetime"] = pd.to_datetime(station_df["datetime"], errors="coerce")
+    camera_df = camera_df.dropna(subset=["datetime"])
+    station_df = station_df.dropna(subset=["datetime"])
+    camera_df["datetime"] = camera_df["datetime"].dt.tz_localize(None).dt.round("h")
+    station_df["datetime"] = station_df["datetime"].dt.tz_localize(None).dt.round("h")
 
     #Merge two datasets on datetime column
     merged_df = pd.merge(camera_df, station_df, on="datetime", how="inner")

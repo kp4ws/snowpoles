@@ -24,19 +24,19 @@ from tqdm import tqdm
 from scipy.spatial import distance
 import os
 from arg_parser import ArgumentParser
-from config import cameras
+from config import cameras, global_max_poles
 
 # Argument parser
 args = ArgumentParser("Evaluate model on the train/val images")
 
 def load_model():
-    model = snowPoleResNet50(pretrained=False, requires_grad=False).to(args.device)
+    num_keypoints = 4 * global_max_poles
+    model = snowPoleResNet50(pretrained=False, requires_grad=False, num_keypoints=num_keypoints).to(args.device)
     # load the model checkpoint
+    #torch.serialization.add_safe_globals([torch.nn.modules.loss.SmoothL1Loss])
     model_path = args.model_path
     checkpoint = torch.load(model_path, map_location=torch.device(args.device), weights_only=False)
-    print(f"loading model from the following path: {args.model_path}")
-    
-    # load model weights state_dict
+
     state_dict = checkpoint['model_state_dict']
     model.load_state_dict(state_dict, strict=True)
     model.eval()
@@ -171,6 +171,11 @@ def predict(model, data, eval='eval'):
                     if key not in evaluation_data:
                         evaluation_data[key] = [None] * current_row_idx
                     evaluation_data[key].append(val)
+
+            target_length = current_row_idx + 1
+            for key in evaluation_data.keys():
+                if len(evaluation_data[key]) < target_length:
+                    evaluation_data[key].append(None)
     
     results = pd.DataFrame(evaluation_data)
     results.to_csv(f"{args.models_output}/{eval}/indiv_img_eval_results.csv")
