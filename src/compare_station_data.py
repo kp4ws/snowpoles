@@ -11,10 +11,8 @@ except ImportError:
     print("Warning: matplotlib not installed – skipping plots.")
 
 def main():
-    # Use same paths as plot_timeseries for consistency
     results_path = "models/output/predictions/results.csv"
-    # Dynamically choose the station file based on the target camera (CTRL1)
-    station_path = "CHRL_data/backup/CTRL1_merged.csv"
+    station_path = "CHRL_data/backup/CC1_merged.csv"
 
     try:
         results_df = pd.read_csv(results_path, parse_dates=['datetime'])
@@ -35,18 +33,17 @@ def main():
         print(f"No prediction data found for camera {target_camera}")
         return
 
-    # Merge using nearest timestamps within 1 hour tolerance
-    camera_df = camera_df.sort_values('datetime')
-    station_df = station_df.sort_values('datetime')
-    merged_df = pd.merge_asof(
-        camera_df,
-        station_df,
-        on='datetime',
-        direction='nearest',
-        tolerance=pd.Timedelta('1h')
-    )
-    # Drop rows where station depth missing
-    merged_df = merged_df.dropna(subset=['field_snow_depth_m'])
+    #Align timestamps of each dataframe
+    camera_df["datetime"] = pd.to_datetime(camera_df["datetime"], errors="coerce")
+    station_df["datetime"] = pd.to_datetime(station_df["datetime"], errors="coerce")
+    camera_df = camera_df.dropna(subset=["datetime"])
+    station_df = station_df.dropna(subset=["datetime"])
+    camera_df["datetime"] = camera_df["datetime"].dt.tz_localize(None).dt.round("h")
+    station_df["datetime"] = station_df["datetime"].dt.tz_localize(None).dt.round("h")
+
+    #Merge two datasets on datetime column
+    merged_df = pd.merge(camera_df, station_df, on="datetime", how="inner")
+
     if merged_df.empty:
         print("Error: No overlapping timestamps found between the camera and the station data.")
         return

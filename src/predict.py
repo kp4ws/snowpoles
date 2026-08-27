@@ -35,13 +35,13 @@ from config import cameras, global_max_poles
 
 from arg_parser import ArgumentParser
 
-def vis_predicted_keypoints(file, image, keypoints, color=(0, 255, 0), diameter=15, active_poles=3, args=None):
+def vis_predicted_keypoints(file, image, keypoints, color=(0, 255, 0), diameter=15, active_poles=[1, 2, 3], args=None):
     #file = file.split(".")[0]
     file = Path(file).stem  
     output_keypoint = keypoints.reshape(-1, 2)
     plt.imshow(image)
 
-    num_active_points = active_poles * 2
+    num_active_points = len(active_poles) * 2
     for p in range(num_active_points):
         if output_keypoint[p, 0] == -999.0 or output_keypoint[p, 1] == -999.0:
             continue
@@ -187,7 +187,7 @@ def predict(model, args, device):
                     predictions_data[key].append(None)
 
             if i % 100 == 0: 
-                vis_predicted_keypoints(filename, image, pred_keypoint, active_poles, args=args) 
+                vis_predicted_keypoints(filename, image, pred_keypoint, active_poles=active_poles, args=args) 
             
     results = pd.DataFrame(predictions_data)
     results.to_csv(f"{args.models_output}/predictions/results.csv")
