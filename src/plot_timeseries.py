@@ -19,7 +19,7 @@ def main():
     
     os.makedirs(args.path, exist_ok=True)
 
-    print(f"Loading data from ...") #TODO
+    print(f"Loading data from ...")
     df = pd.read_csv(f"{args.models_output}/predictions/results.csv")
     
     df["datetime"] = pd.to_datetime(df['datetime'], format="%m/%d/%Y %H:%M")
@@ -62,15 +62,15 @@ def main():
                     plt.plot(
                         pole_data["datetime"],
                         pole_data[col],
-                        marker="o", #TODO dots might be too big
+                        marker="o",
                         linestyle="-",
                         markersize=4,
                         label=f"Pole {pole_id}"
                     )
 
-        if cam == "CTRL1":
-            #TODO: should this be in config file?
-            station_data_path = "CHRL_data/backup/CTRL1_merged.csv"
+        if cam == "CC1":
+            #NOTE: in later iteration, this could be added into configuration file.
+            station_data_path = "CHRL_data/backup/CC1_merged.csv"
             if not os.path.exists(station_data_path):
                 print(f"Warning: station data path doesn't exist")
 

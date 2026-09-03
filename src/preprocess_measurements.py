@@ -32,5 +32,4 @@ def process_stake_measurements(path, file):
     print(clean_df)
 
 if __name__ == "__main__":
-    #TODO: consider refactoring hardcoded route
     process_stake_measurements("CHRL_data", "stake_measurements.csv")

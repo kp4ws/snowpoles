@@ -5,7 +5,8 @@ from scipy.stats import linregress
 import matplotlib.pyplot as plt
 
 def main():
-    #TODO: Change these hardcoded paths as needed, depending on what you're comparing against.
+    #NOTE: Change these hardcoded paths as needed, depending on what you're comparing against.
+    #In future iteration, could consider adding these paths into configuration file.
     results_path = "models/output/predictions/results.csv"
     station_path = "CHRL_data/backup/CC1_merged.csv"
 
@@ -21,7 +22,7 @@ def main():
         return
 
     #Filter for specific camera site
-    target_camera = "CC1" #TODO: Consider adding this into config.toml
+    target_camera = "CC1" #NOTE: Consider adding this into configuration file.
     camera_df = results_df[results_df["camera_id"] == target_camera].copy()
 
     if camera_df.empty:
