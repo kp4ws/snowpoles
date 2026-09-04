@@ -29,6 +29,7 @@ class ArgumentParser():
         self.parser.add_argument("--model_path", required=False, help="model to use")
         # self.parser.add_argument("--datapath", help="(deprecated) directory where images are located")
         self.parser.add_argument("--path", help="directory where images are located")
+        self.parser.add_argument("--station_path", help="directory where weather station data is located")
         self.parser.add_argument("--target_label_count", help="label N images")
         self.parser.add_argument("--device", required=False, help='device to use for processing ("cpu" or "cuda")')
         self.parser.add_argument("--models_output", required=False, help="directory in which to store models output")
@@ -41,8 +42,8 @@ class ArgumentParser():
     def _get_arguments(self):
         # Get arguments from config if they weren't specified
         if not self.args.model_path:
-            models_output_dir = paths.get("models_output", "output/models")
-            default_trained_path = os.path.normpath(os.path.join(models_output_dir, paths.get("trained_model_name", "model.pth")))
+            models_output_dir = paths.get("models_output", "models/output")
+            default_trained_path = os.path.normpath(os.path.join(models_output_dir, "training", paths.get("trained_model_name", "model.pth")))
             
             # Check if fine-tuned model actually exists from a completed training run
             if os.path.exists(default_trained_path):
@@ -53,6 +54,8 @@ class ArgumentParser():
 
         if not self.args.path:
             self.args.path = paths.get("data_directory")
+        if not self.args.station_path:
+            self.args.station_path = paths.get("station_directory")
         if not self.args.device:
             self.args.device = training.get("device", "cpu")
         if not self.args.target_label_count:

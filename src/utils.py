@@ -39,7 +39,7 @@ def valid_keypoints_plot(args, image, outputs, orig_keypoints, epoch):
         else:
             plt.plot(output_keypoint[p, 0], output_keypoint[p, 1], 'r.') ## bottom
             plt.plot(orig_keypoint[p, 0], orig_keypoint[p, 1], 'b.')
-    plt.savefig(f"{args.models_output}/val_epoch_{epoch}.png")
+    plt.savefig(f"{args.models_output}/training/val_epoch_{epoch}.png")
     plt.close()
 
 

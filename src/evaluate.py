@@ -15,20 +15,18 @@ import os
 import numpy as np
 import utils
 import pandas as pd
+from pathlib import Path
 from tqdm import tqdm
 from scipy.spatial import distance
 import os
 from arg_parser import ArgumentParser
-from config import cameras, global_max_poles
+from config import cameras, global_max_poles, paths
 print("Initializing environment and loading ML libraries (this may take a few seconds)...", flush=True)
 from model import snowPoleResNet50
 from dataset import SnowPoleDataset
 import torch
 
-# Argument parser
-args = ArgumentParser("Evaluate model on the train/val images")
-
-def load_model():
+def load_model(args):
     num_keypoints = 4 * global_max_poles
     model = snowPoleResNet50(pretrained=False, requires_grad=False, num_keypoints=num_keypoints).to(args.device)
     # load the model checkpoint
@@ -42,11 +40,7 @@ def load_model():
     return model
 
 
-def predict(model, data, eval='eval'): 
-
-    if not os.path.exists(f"{args.models_output}/{eval}"):
-        os.makedirs(f"{args.models_output}/{eval}", exist_ok=True)
-
+def predict(args, model, data): 
     evaluation_data = {
         "camera": [],
         "filename": []
@@ -177,7 +171,7 @@ def predict(model, data, eval='eval'):
                     evaluation_data[key].append(None)
     
     results = pd.DataFrame(evaluation_data)
-    results.to_csv(f"{args.models_output}/{eval}/indiv_img_eval_results.csv")
+    results.to_csv(f"{args.models_output}/eval/indiv_img_eval_results.csv")
 
     metric_substrings = {
         "Top Pixel Error": "_top_pixel_error",
@@ -223,20 +217,22 @@ def predict(model, data, eval='eval'):
 
     # Create DataFrame and save to CSV
     df = pd.DataFrame(stats_data)
-    df.to_csv(f"{args.models_output}/{eval}/overall_statistics.csv", index=False)
+    df.to_csv(f"{args.models_output}/eval/overall_statistics.csv", index=False)
 
     return results
 
 def main():
-    model = load_model()
-    
-    from config import paths
-    from pathlib import Path
-    import pandas as pd
+    # Argument parser
+    args = ArgumentParser("Evaluate model on the train/val images")
+
+    if not os.path.exists(f"{args.models_output}/eval"):
+        os.makedirs(f"{args.models_output}/eval", exist_ok=True)
+
+    model = load_model(args)
     
     all_images = list(Path(paths.get('data_directory')).rglob("*.JPG"))
     parents_dict = {i.name: str(i) for i in all_images}
-    validation_samples = pd.read_csv(f"{args.models_output}/validation_samples.csv")
+    validation_samples = pd.read_csv(f"{args.models_output}/training/validation_samples.csv")
     
     validation_data = SnowPoleDataset(
         validation_samples, 
@@ -245,7 +241,7 @@ def main():
     )
 
     print('results on valid data\n')
-    outputs = predict(model, validation_data)
+    outputs = predict(args, model, validation_data)
 
     print("Evaluation complete, results saved.")
 

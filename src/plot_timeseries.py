@@ -16,10 +16,15 @@ from config import timeseries
 
 def main():
     args = ArgumentParser(description="Plot snow depth time series from results.csv")
-    
     os.makedirs(args.path, exist_ok=True)
 
-    print(f"Loading data from ...")
+    station_path = f"{args.station_path}/CC1_merged.csv"
+    if not os.path.exists(station_path):
+        print(f"Warning: station data path doesn't exist")
+
+    target_camera = "CC1"
+
+    print(f"Loading data from prediction results...")
     df = pd.read_csv(f"{args.models_output}/predictions/results.csv")
     
     df["datetime"] = pd.to_datetime(df['datetime'], format="%m/%d/%Y %H:%M")
@@ -68,13 +73,9 @@ def main():
                         label=f"Pole {pole_id}"
                     )
 
-        if cam == "CC1":
-            #NOTE: in later iteration, this could be added into configuration file.
-            station_data_path = "CHRL_data/backup/CC1_merged.csv"
-            if not os.path.exists(station_data_path):
-                print(f"Warning: station data path doesn't exist")
-
-            df_station = pd.read_csv(station_data_path, parse_dates=['datetime'])
+        #If camera = target camera, plot data from weather station to see visual comparison
+        if cam == target_camera:
+            df_station = pd.read_csv(station_path, parse_dates=['datetime'])
 
             # Set the index, resample to 1-Hour intervals (filling missing hours with NaN), and reset
             # df_station = df_station.set_index('datetime').resample('1H').mean().reset_index()

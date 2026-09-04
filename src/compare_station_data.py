@@ -3,12 +3,22 @@ import numpy as np
 from sklearn.metrics import r2_score, mean_absolute_error, root_mean_squared_error
 from scipy.stats import linregress
 import matplotlib.pyplot as plt
+from arg_parser import ArgumentParser
+import os
 
 def main():
-    #NOTE: Change these hardcoded paths as needed, depending on what you're comparing against.
-    #In future iteration, could consider adding these paths into configuration file.
-    results_path = "models/output/predictions/results.csv"
-    station_path = "CHRL_data/backup/CC1_merged.csv"
+    args = ArgumentParser("Evaluate model on the train/val images")
+    
+    #NOTE: This is currently ONLY comparing CC1 prediction with CC1 weather station data.
+    #Future iteration would involve looping through each camera site and running it against corresponding weather station
+    #Since not all camera sites have nearby weather stations, a paramter could be added into the configuration file to determine if site is by a station or not.
+    results_path = f"{args.models_output}/predictions/results.csv"
+    station_path = f"{args.station_path}/CC1_merged.csv"
+
+    if not os.path.exists(station_path):
+        print(f"Warning: station data path doesn't exist")
+    
+    target_camera = "CC1"
 
     try:
         results_df = pd.read_csv(results_path, parse_dates=['datetime'])
@@ -22,7 +32,6 @@ def main():
         return
 
     #Filter for specific camera site
-    target_camera = "CC1" #NOTE: Consider adding this into configuration file.
     camera_df = results_df[results_df["camera_id"] == target_camera].copy()
 
     if camera_df.empty:
@@ -55,7 +64,7 @@ def main():
 
     #Extract arrays for each of the datasets from the merged dataframe
     try:
-        pred_depth = merged_df["s2_snow_depth"] #NOTE: Currently using snow stake 2. TODO: Test out with other snow stakes later on.
+        pred_depth = merged_df["s2_snow_depth"] #NOTE: Currently using snow stake 2 for comparison (no specific reason for choosing 2, just appears not to shift much).
         true_depth = merged_df["snow_depth_m"]
         true_depth = true_depth * 100  # convert from meters to centimeters
     except KeyError as e:

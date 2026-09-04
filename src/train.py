@@ -14,31 +14,29 @@ python src/train.py
 tensorboard --logdir=runs
 
 '''
-
 # Import startup libraries
 import os
 import sys
-print("Initializing environment and loading ML libraries (this may take a few seconds)...", flush=True)
-
-# Import all libraries
-import torch
-import torch.optim as optim
 import matplotlib.pyplot as plt
-import torch.nn as nn
 import matplotlib
 import utils
-from model import snowPoleResNet50
 from tqdm import tqdm
 import numpy as np
-from dataset import SnowPoleDataset
-# training viz 
-from torch.utils.tensorboard import SummaryWriter  # For PyTorch
-from torch.utils.data import DataLoader
 import copy
 from pathlib import Path
 import pandas as pd
 from config import global_max_poles, paths, training
 from arg_parser import ArgumentParser
+
+print("Initializing environment and loading ML libraries (this may take a few seconds)...", flush=True)
+import torch
+import torch.optim as optim
+import torch.nn as nn
+from model import snowPoleResNet50
+from dataset import SnowPoleDataset
+# training viz 
+from torch.utils.tensorboard import SummaryWriter  # For PyTorch
+from torch.utils.data import DataLoader
 
 def load_model(args):
     num_keypoints = 4 * global_max_poles
@@ -78,11 +76,9 @@ def train_test_split(csv_path, all_images):
     training_samples = training_samples.reset_index(drop=True)
     validation_samples = validation_samples.reset_index(drop=True)
     
-    # save labels to output folder
-    if not os.path.exists(f"{paths.get('models_output')}"):
-        os.makedirs(f"{paths.get('models_output')}", exist_ok=True)
-    training_samples.to_csv(f"{paths.get('models_output')}/training_samples.csv")
-    validation_samples.to_csv(f"{paths.get('models_output')}/validation_samples.csv")
+    # save labels to training folder
+    training_samples.to_csv(f"{paths.get('models_output')}/training/training_samples.csv")
+    validation_samples.to_csv(f"{paths.get('models_output')}/training/validation_samples.csv")
 
     print(f'# of examples we will now train on {len(training_samples)}, val on {len(validation_samples)}')
     return training_samples, validation_samples
@@ -147,10 +143,8 @@ def validate(args, model, dataloader, data, epoch, criterion):
             loss = criterion(outputs[valid_mask], keypoints[valid_mask]) ## cross entropy loss between input and output
 
             valid_running_loss += loss.item()
-            # plot the predicted validation keypoints after every...
-            # ... predefined number of epochs
-            if not os.path.exists(args.models_output):
-                os.makedirs(args.models_output, exist_ok=True)
+            # plot the predicted validation keypoints after every number of epochs
+
             if (epoch + 1) % 1 == 0:
                 utils.valid_keypoints_plot(args, image, outputs, keypoints, epoch)
         
@@ -193,7 +187,7 @@ def perform_training(args, model, train_loader, train_data, validation_loader, v
                     "optimizer_state_dict": optimizer.state_dict(),
                     "loss": criterion,
                 },
-                f"{args.models_output}/model_epoch{epoch}.pth",
+                f"{args.models_output}/training/model_epoch{epoch}.pth",
             )
 
         writer.add_scalar('Loss/train',train_epoch_loss, epoch)
@@ -227,7 +221,7 @@ def loss_plot(args, train_loss, val_loss, model, optimizer, criterion, writer):
     plt.grid(True, color='lightgrey', linestyle='-', linewidth=0.5)
     plt.gca().set_axisbelow(True)  # Put grid lines behind the plot lines
 
-    plt.savefig(f"{args.models_output}/loss.png")
+    plt.savefig(f"{args.models_output}/training/loss.png")
     plt.close()  # changed from plt.show()
     torch.save(
         {
@@ -236,20 +230,24 @@ def loss_plot(args, train_loss, val_loss, model, optimizer, criterion, writer):
             "optimizer_state_dict": optimizer.state_dict(),
             "loss": criterion,
         },
-        f"{args.models_output}/model.pth",
+        f"{args.models_output}/training/model.pth",
     )  ### the last model
     writer.close()
 
 def main():
-    print("Preparing training and validation samples...")
     # Argument parser
     args = ArgumentParser("Train a model on a set of images", "train")
     matplotlib.style.use('ggplot')
     # start_time = time.time() 
 
+    ## create output path
+    if not os.path.exists(f"{args.models_output}/training"):
+        os.makedirs(f"{args.models_output}/training", exist_ok=True)
+
     all_images = list(Path(paths.get('data_directory')).rglob("*.JPG"))
     parents_dict = {i.name: str(i) for i in all_images}
 
+    print("Preparing training and validation samples...")
     # get the training and validation data samples
     training_samples, validation_samples = train_test_split(f"{paths.get('labels')}", all_images)
 
@@ -287,10 +285,6 @@ def main():
     if training.get("show_dataset_plot"):
         utils.dataset_keypoints_plot(train_data)
         utils.dataset_keypoints_plot(validation_data)
-
-    ## create output path
-    if not os.path.exists(f"{args.models_output}"):
-        os.makedirs(f"{args.models_output}", exist_ok=True)
 
     # model
     model = load_model(args)

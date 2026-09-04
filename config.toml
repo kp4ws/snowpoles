@@ -15,10 +15,14 @@ labels = 'CHRL_data/labels.csv'
 pole_metadata = 'CHRL_data/pole_metadata.csv'
 
 # Model paths
-pretrained_model = "models/CO_and_WA_model.pth" # Breen's existing model
-trained_model_name = "model.pth"
+pretrained_model = 'models/CO_and_WA_model.pth' # Breen's existing model
+trained_model_name = 'model.pth'
 models_output = 'models/output'
 images_output = 'images/output'
+
+# Weather station paths
+station_directory = 'CHRL_data/weather_station_data'
+
 
 # ====================================
 # LABELING Configuration
@@ -48,6 +52,7 @@ show_dataset_plot = false # Show dataset plot
 # ====================================
 [timeseries]
 single_average_mode = false
+
 
 # ====================================
 # CAMERAS & STAKES Configuration
