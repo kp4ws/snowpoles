@@ -8,6 +8,10 @@ import os
 
 def main():
     args = ArgumentParser("Evaluate model on the train/val images")
+
+    #Create output directory if it doesn't already exist
+    output_directory = f"{args.models_output}/weather_station_comparison"
+    os.makedirs(output_directory, exist_ok=True)
     
     #NOTE: This is currently ONLY comparing CC1 prediction with CC1 weather station data.
     #Future iteration would involve looping through each camera site and running it against corresponding weather station
@@ -17,7 +21,8 @@ def main():
 
     if not os.path.exists(station_path):
         print(f"Warning: station data path doesn't exist")
-    
+
+    #NOTE: This is currently targeting CC1 site for comparison. Change as needed, depending on which site you want to target.
     target_camera = "CC1"
 
     try:
@@ -82,12 +87,22 @@ def main():
     mae = mean_absolute_error(true_depth, pred_depth)
     rmse = root_mean_squared_error(true_depth, pred_depth)
 
-    print(f"\n--- Stats for {target_camera} (Pole 1) ---")
-    print(f"Data points compared: {len(true_depth)}")
-    print(f"R^2: {r2:.4f}")
-    print(f"MAE: {mae:.2f} cm")
-    print(f"RMSE: {rmse:.2f} cm")
-    print(f"Regression Line: y= {slope:.2f}x + {intercept:.2f}\n")
+    # print(f"\n--- Stats for {target_camera} (Pole 1) ---")
+    # print(f"Data points compared: {len(true_depth)}")
+    # print(f"R^2: {r2:.4f}")
+    # print(f"MAE: {mae:.2f} cm")
+    # print(f"RMSE: {rmse:.2f} cm")
+    # print(f"Regression Line: y= {slope:.2f}x + {intercept:.2f}\n")
+
+    output_record = {
+        "R²": r2,
+        "MAE (cm)": mae,
+        "RMSE (cm)": rmse,
+        "Regression Line": f"y = {slope:.4f}x {"+" if intercept >= 0 else "-"} {abs(intercept):.4f}",
+    }
+
+    output_df = pd.DataFrame([output_record])
+    output_df.to_csv(f"{output_directory}/comparison_results.csv", index=False)
 
     # Visualization
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(15, 6))
@@ -116,7 +131,13 @@ def main():
     ax2.legend()
 
     plt.tight_layout()
-    plt.show()
+    # plt.show()
+
+    save_path = f"{output_directory}/station_comparison.png"
+    plt.savefig(save_path, dpi=300)
+    plt.close()
+
+    print(f"Saved plot to {save_path}")
 
 if __name__ == "__main__":
     main()

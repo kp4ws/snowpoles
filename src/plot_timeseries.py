@@ -16,7 +16,6 @@ from config import timeseries
 
 def main():
     args = ArgumentParser(description="Plot snow depth time series from results.csv")
-    os.makedirs(args.path, exist_ok=True)
 
     station_path = f"{args.station_path}/CC1_merged.csv"
     if not os.path.exists(station_path):
@@ -119,7 +118,11 @@ def main():
         plt.grid(True, linestyle='--', alpha=0.7)
         plt.tight_layout()
 
-        save_path = Path(args.path) / f"{cam}_timeseries.png"
+        #Create output directory if it doesn't already exist
+        output_directory = f"{args.models_output}/timeseries"
+        os.makedirs(output_directory, exist_ok=True)
+
+        save_path = Path(output_directory) / f"{cam}_timeseries.png"
         plt.savefig(save_path, dpi=300)
         plt.close()
 
