@@ -64,7 +64,7 @@ def main():
 
     #Extract arrays for each of the datasets from the merged dataframe
     try:
-        pred_depth = merged_df["s2_snow_depth"] #NOTE: Currently using snow stake 2 for comparison (no specific reason for choosing 2, just appears not to shift much).
+        pred_depth = merged_df["s1_snow_depth"] #NOTE: Currently using snow stake 1 for comparison (no specific reason for choosing 2, just appears not to shift much).
         true_depth = merged_df["snow_depth_m"]
         true_depth = true_depth * 100  # convert from meters to centimeters
     except KeyError as e:
@@ -82,7 +82,7 @@ def main():
     mae = mean_absolute_error(true_depth, pred_depth)
     rmse = root_mean_squared_error(true_depth, pred_depth)
 
-    print(f"\n--- Stats for {target_camera} (Pole 2) ---")
+    print(f"\n--- Stats for {target_camera} (Pole 1) ---")
     print(f"Data points compared: {len(true_depth)}")
     print(f"R^2: {r2:.4f}")
     print(f"MAE: {mae:.2f} cm")

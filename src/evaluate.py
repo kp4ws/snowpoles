@@ -79,7 +79,7 @@ def predict(args, model, data):
             # flatten the keypoints
             keypoints = keypoints.detach().cpu().numpy().reshape(-1,2)
 
-            utils.eval_keypoints_plot(args, filename, image, outputs, eval, orig_keypoints=keypoints) ## visualize points
+            utils.eval_keypoints_plot(args, filename, image, outputs, orig_keypoints=keypoints) ## visualize points
             
             for j, poleId in enumerate(active_poles):
                 

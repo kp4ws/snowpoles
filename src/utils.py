@@ -73,7 +73,7 @@ def dataset_keypoints_plot(data):
     plt.close()
 
 
-def eval_keypoints_plot(args, file, image, outputs, eval, orig_keypoints): 
+def eval_keypoints_plot(args, file, image, outputs, orig_keypoints): 
     """
     This function plots the regressed (predicted) keypoints and the actual 
     keypoints after each validation epoch for one image in the batch.
@@ -101,7 +101,7 @@ def eval_keypoints_plot(args, file, image, outputs, eval, orig_keypoints):
         plt.plot(orig_keypoints[p, 0], orig_keypoints[p, 1], 'b.',  markersize=20)
         plt.plot(output_keypoint[p, 0], output_keypoint[p, 1], 'r.', markersize=20)
 
-    plt.savefig(f"{args.models_output}/{eval}/{eval}_{file}.png")
+    plt.savefig(f"{args.models_output}/eval/eval_{file}.png")
     plt.close()
 
 def vis_keypoints(image, keypoints, color=(0,255,0), diameter=15):
